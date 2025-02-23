@@ -1,21 +1,21 @@
 "use client"
 
 import type React from "react"
-
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
 
-// Definisi tipe produk
 interface Product {
   id: number
   name: string
   price: number
   image: string
+  category: string
 }
 
 export default function ProductEditPage() {
@@ -24,17 +24,23 @@ export default function ProductEditPage() {
   const [product, setProduct] = useState<Product | null>(null)
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
-  const [image, setImage] = useState("")
+  const [image, setImage] = useState<string | null>(null)
+  const [category, setCategory] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const categories = ["Electronics", "Clothing", "Home"]
 
   useEffect(() => {
-    // Contoh data produk (gantilah dengan API jika ada)
+    // Fetch product data (replace with API call in real application)
     const products: Product[] = [
-      { id: 1, name: "Product 1", price: 19.99, image: "/placeholder.svg" },
-      { id: 2, name: "Product 2", price: 29.99, image: "/placeholder.svg" },
-      { id: 3, name: "Product 3", price: 39.99, image: "/placeholder.svg" },
-      { id: 4, name: "Product 4", price: 49.99, image: "/placeholder.svg" },
-      { id: 5, name: "Product 5", price: 59.99, image: "/placeholder.svg" },
-      { id: 6, name: "Product 6", price: 69.99, image: "/placeholder.svg" },
+      { id: 1, name: "Product 1", price: 19.99, image: "/placeholder.svg", category: "Electronics" },
+      { id: 2, name: "Product 2", price: 29.99, image: "/placeholder.svg", category: "Clothing" },
+      { id: 3, name: "Product 3", price: 39.99, image: "/placeholder.svg", category: "Home" },
+      { id: 4, name: "Product 4", price: 49.99, image: "/placeholder.svg", category: "Electronics" },
+      { id: 5, name: "Product 5", price: 59.99, image: "/placeholder.svg", category: "Clothing" },
+      { id: 6, name: "Product 6", price: 69.99, image: "/placeholder.svg", category: "Home" },
+      { id: 7, name: "Product 5", price: 79.99, image: "/placeholder.svg", category: "Electronics" },
+      { id: 8, name: "Product 6", price: 89.99, image: "/placeholder.svg", category: "Clothing" },
     ]
     const foundProduct = products.find((p) => p.id === Number(id))
     if (foundProduct) {
@@ -42,15 +48,27 @@ export default function ProductEditPage() {
       setName(foundProduct.name)
       setPrice(foundProduct.price.toString())
       setImage(foundProduct.image)
+      setCategory(foundProduct.category)
     }
   }, [id])
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Here you would typically send the updated product data to your API
-    console.log("Updated product:", { ...product, name, price: Number.parseFloat(price), image })
+    console.log("Updated product:", { ...product, name, price: Number.parseFloat(price), image, category })
     // After successful update, navigate back to the product list
-    router.push("/")
+    router.push("/Product")
   }
 
   if (!product) {
@@ -81,35 +99,52 @@ export default function ProductEditPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="image">URL Gambar</Label>
+              <Label htmlFor="category">Kategori</Label>
+              <Select onValueChange={setCategory} value={category}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="image">Gambar Produk</Label>
               <Input
                 id="image"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="URL gambar produk"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                ref={fileInputRef}
+                className="hidden"
               />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                Pilih Gambar
+              </Button>
             </div>
             <div className="pt-4">
-              <Image
-                src={image || "/placeholder.svg"}
-                alt={name}
-                width={200}
-                height={200}
-                className="rounded-lg object-cover"
-              />
+              {image && (
+                <Image
+                  src={image || "/placeholder.svg"}
+                  alt={name}
+                  width={200}
+                  height={200}
+                  className="rounded-lg object-cover"
+                />
+              )}
             </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Kembali
-          </Button>
-          <Button type="submit" onClick={handleSubmit}>
-            Simpan Perubahan
-          </Button>
+          <Button variant="outline" onClick={() => router.push("/Product")}>Kembali</Button>
+          <Button type="submit" onClick={handleSubmit}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
     </div>
   )
 }
-
