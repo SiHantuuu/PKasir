@@ -12,6 +12,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
+
 import { GalleryVerticalEnd } from "lucide-react";
 
 type MenuItem = {
@@ -34,13 +35,12 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#" className="flex items-center gap-2">
+              <a href="" className="flex items-center gap-2">
                 <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GalleryVerticalEnd className="size-4" />
                 </div>
                 <div className="leading-none">
                   <span className="font-semibold block">PKasir</span>
-                  <span>v100</span>
                 </div>
               </a>
             </SidebarMenuButton>
