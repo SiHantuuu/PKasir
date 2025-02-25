@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,13 +14,24 @@ export default function NewProductPage() {
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
   const [image, setImage] = useState("/placeholder.svg")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Here you would typically send the new product data to your API
-    console.log("New product:", { name, price: Number.parseFloat(price), image })
+    console.log("New Item:", { name, price: Number.parseFloat(price), image })
     // After successful creation, navigate back to the product list
-    router.push("/")
+    router.push("/Product")
+  }
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   return (
@@ -55,13 +65,18 @@ export default function NewProductPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="image">URL Gambar</Label>
+              <Label htmlFor="image">Gambar Produk</Label>
               <Input
                 id="image"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="URL gambar produk"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                ref={fileInputRef}
+                className="hidden"
               />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                Pilih Gambar
+              </Button>
             </div>
             <div className="pt-4">
               <Image
@@ -75,7 +90,7 @@ export default function NewProductPage() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={() => router.push("/")}>
+          <Button variant="outline" onClick={() => router.push("/Product")}>
             Batal
           </Button>
           <Button type="submit" onClick={handleSubmit}>
