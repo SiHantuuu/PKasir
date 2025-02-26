@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CreditCard, User, Wallet, ShoppingCart } from "lucide-react"
+import { CreditCard, User, Wallet, ShoppingCart, Search } from "lucide-react"
 
 // Simulated RFID card data
 const rfidCards = [
@@ -37,6 +37,7 @@ export default function Page() {
   const [scannedCard, setScannedCard] = useState<(typeof rfidCards)[0] | null>(null)
   const [formData, setFormData] = useState({ rfid: "", name: "" })
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
 
   const simulateScan = () => {
     const randomCard = rfidCards[Math.floor(Math.random() * rfidCards.length)]
@@ -85,17 +86,43 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-          <div className="flex items-center gap-2 px-3">
+        <motion.header
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
+          transition={{ type: "spring", stiffness: 100 }}
+          className="flex h-16 shrink-0 items-center border-b bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg w-full sticky top-0 z-40"
+        >
+          <div className="flex items-center px-6">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <h1 className="text-2xl font-bold">RFID Scanner</h1>
+            <Separator orientation="vertical" className="mx-4 h-4" />
+            <motion.h1
+              className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              RFID Scanner
+            </motion.h1>
           </div>
-        </header>
-        <div className="flex flex-col h-[calc(100vh-4rem)] p-4">
+          <div className="flex-1 flex justify-end items-center space-x-4 px-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="relative"
+            >
+            </motion.div>
+          </div>
+        </motion.header>
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-6">
           <div className="grid grid-cols-2 gap-4 flex-grow">
-            <div className="flex flex-col gap-4">
-              <Card className="w-full">
+            <motion.div
+              className="flex flex-col gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle>User Information</CardTitle>
                 </CardHeader>
@@ -134,40 +161,65 @@ export default function Page() {
                   </div>
                 </CardContent>
               </Card>
-              <Button onClick={simulateScan} size="lg" className="w-full">
+              <Button onClick={simulateScan} size="lg" className="w-full bg-primary text-primary-foreground">
                 Simulate RFID Scan
               </Button>
-              <Button onClick={simulateProductScan} size="lg" className="w-full">
+              <Button onClick={simulateProductScan} size="lg" className="w-full bg-primary text-primary-foreground">
                 Simulate Product Scan
               </Button>
-            </div>
-            <div className="flex flex-col">
-              <Card className="flex-grow">
+            </motion.div>
+            <motion.div
+              className="flex flex-col"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Card className="flex-grow bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle>Scanned Products</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {scannedProducts.length === 0 ? (
-                    <p className="text-center text-gray-500">No products scanned yet</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {scannedProducts.map((product) => (
-                        <li key={product.id} className="flex justify-between items-center">
-                          <span>{product.name}</span>
-                          <span>
-                            {product.quantity} x Rp {product.price.toLocaleString("id-ID")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <AnimatePresence>
+                    {scannedProducts.length === 0 ? (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-center text-gray-500"
+                      >
+                        No products scanned yet
+                      </motion.p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {scannedProducts.map((product) => (
+                          <motion.li
+                            key={product.id}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="flex justify-between items-center"
+                          >
+                            <span>{product.name}</span>
+                            <span>
+                              {product.quantity} x Rp {product.price.toLocaleString("id-ID")}
+                            </span>
+                          </motion.li>
+                        ))}
+                      </ul>
+                    )}
+                  </AnimatePresence>
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <motion.div
+            className="grid grid-cols-2 gap-4 mt-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
             {scannedCard && (
-              <Card className="w-full">
+              <Card className="w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
                 <CardContent className="flex items-center p-4">
                   <Wallet className="h-6 w-6 mr-2 text-muted-foreground" />
                   <div>
@@ -185,13 +237,13 @@ export default function Page() {
               <Button
                 onClick={handlePay}
                 size="lg"
-                className="w-full md:w-auto"
+                className="w-full md:w-auto bg-primary text-primary-foreground"
                 disabled={!scannedCard || scannedProducts.length === 0}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" /> Pay
               </Button>
             </div>
-          </div>
+          </motion.div>
         </div>
       </SidebarInset>
     </SidebarProvider>

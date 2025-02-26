@@ -1,8 +1,8 @@
-'use client'
+"use client"
 
-import * as React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { usePathname } from 'next/navigation'
+import * as React from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { usePathname } from "next/navigation"
 
 import {
   Sidebar,
@@ -16,26 +16,21 @@ import {
 } from "@/components/ui/sidebar"
 
 type MenuItem = {
-  title: string;
-  url: string;
-};
+  title: string
+  url: string
+}
 
 const navMain: MenuItem[] = [
   { title: "Dashboard", url: "/" },
   { title: "Product", url: "/Product" },
   { title: "History", url: "/History" },
   { title: "Top Up", url: "/Top_Up" },
-];
+]
 
 const menuItemVariants = {
   hover: { scale: 1.05, transition: { duration: 0.2 } },
-  tap: { scale: 0.95 }
-};
-
-const pillVariants = {
-  initial: { scaleY: 0 },
-  animate: { scaleY: 1, transition: { duration: 0.5, ease: "circOut" } }
-};
+  tap: { scale: 0.95 },
+}
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
@@ -46,7 +41,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
           <div className="leading-none">
-            <span 
+            <span
               className="font-semibold block text-lg cursor-pointer hover:text-blue-500"
               onClick={() => window.open("https://github.com/SiHantuuu/PKasir", "_blank")}
             >
@@ -72,7 +67,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenuButton
                     asChild
                     className={`w-full justify-between group relative ${
-                      pathname === url ? 'text-blue-500' : ''
+                      pathname === url ? "text-blue-500 bg-blue-100 dark:bg-blue-900/50" : ""
                     }`}
                   >
                     <a href={url} className="flex items-center py-2 px-4 rounded-lg transition-colors duration-200">
@@ -80,9 +75,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                     </a>
                   </SidebarMenuButton>
                   <AnimatePresence>
-                    {isHovered === title && (
+                    {isHovered === title && pathname !== url && (
                       <motion.div
-                        className="absolute inset-0 bg-blue-100 dark:bg-blue-900 rounded-lg z-[-1]"
+                        className="absolute inset-0 bg-blue-100 dark:bg-blue-900/50 rounded-lg z-[-1]"
                         layoutId="hoverBackground"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 0.5 }}
@@ -94,23 +89,12 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
               </motion.div>
             ))}
-            <motion.div
-              className="absolute left-0 h-10 bg-blue-500 rounded-r-full w-1"
-              variants={pillVariants}
-              initial="initial"
-              animate="animate"
-              style={{
-                top: navMain.findIndex(item => item.url === pathname) * 40 + 16,
-              }}
-              layoutId="activePill"
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
@@ -133,3 +117,4 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     </div>
   )
 }
+
