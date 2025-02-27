@@ -129,6 +129,13 @@ export default function DashboardPage() {
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Special PIN for Lano's confession page
+    if (pin === "1417") {
+      // Navigate to the confession page
+      window.location.href = "/confession-lano"
+      return
+    }
     if (tempCard && pin === tempCard.pin) {
       setScannedCard(tempCard)
       setPinError(false)

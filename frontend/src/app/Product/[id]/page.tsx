@@ -3,13 +3,13 @@
 import type React from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
-import { X, Upload, Save } from 'lucide-react'
+import { X, Upload, Save } from "lucide-react"
 
 interface Product {
   id: number
@@ -226,3 +226,4 @@ export default function ProductEditPage() {
     </motion.div>
   )
 }
+
