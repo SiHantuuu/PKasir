@@ -16,29 +16,35 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   return (
-    <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300, damping: 10 }}>
+    <motion.div
+      whileHover={{
+        y: -5,
+        scale: 1.03, // Added scale for zoom effect
+      }}
+      transition={{
+        type: "tween",
+        ease: "easeInOut",
+        duration: 0.3,
+      }}
+    >
       <Card className="overflow-hidden cursor-pointer">
         <CardContent className="p-0">
           <div className="relative h-48">
-            <Image src={product.image || "/placeholder.svg"} alt={product.name} layout="fill" objectFit="cover" />
+            <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
+            <motion.div
+              className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <p className="text-white font-semibold text-sm">View Details</p>
+            </motion.div>
           </div>
-          <motion.div
-            className="p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <div className="p-4">
             <h3 className="font-semibold">{product.name}</h3>
             <p className="text-sm text-gray-500">{product.category}</p>
-            <motion.p
-              className="mt-2 font-bold"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              ${product.price.toFixed(2)}
-            </motion.p>
-          </motion.div>
+            <p className="mt-2 font-bold">${product.price.toFixed(2)}</p>
+          </div>
         </CardContent>
       </Card>
     </motion.div>

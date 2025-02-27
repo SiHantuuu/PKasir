@@ -191,8 +191,26 @@ export default function Page() {
   const filteredTransactions = transactions.filter((transaction) => {
     const transactionDate = new Date(transaction.date)
     const matchesMonth = selectedMonth === "all" || (transactionDate.getMonth() + 1).toString() === selectedMonth
-    const matchesSearch = transaction.userName.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const query = searchQuery.trim().toLowerCase()
+
+    // If search query is empty, don't filter by search
+    if (!query) {
+      return matchesMonth
+    }
+
+    // Filter by username and transaction type
+    const userName = transaction.userName.toLowerCase()
+    const transactionType = transaction.type.toLowerCase()
+    const matchesSearch = userName.includes(query) || transactionType.includes(query)
+
     return matchesMonth && matchesSearch
+  })
+
+  console.log({
+    searchQuery,
+    filteredCount: filteredTransactions.length,
+    transactions: transactions.map((t) => ({ type: t.type, userName: t.userName })),
   })
 
   const formatCurrency = (amount: number) => {
@@ -276,6 +294,13 @@ export default function Page() {
   }
 
   const isValidAmount = selectedAmount && selectedAmount >= 10000
+
+  // Animasi untuk item transaksi
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
+  }
 
   if (!nfcId) {
     return (
@@ -583,7 +608,7 @@ export default function Page() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                whileHover={{ y: -5 }}
+                className="w-full"
               >
                 <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
                   <CardContent className="p-6 space-y-6">
@@ -623,23 +648,30 @@ export default function Page() {
                         </motion.div>
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      <AnimatePresence mode="wait">
+                    <motion.div layout className="space-y-4">
+                      <AnimatePresence mode="popLayout">
                         {filteredTransactions.length > 0 ? (
-                          filteredTransactions.map((transaction, index) => (
+                          filteredTransactions.map((transaction) => (
                             <motion.div
                               key={transaction.id}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              transition={{ delay: index * 0.1 }}
-                              whileHover={{ scale: 1.02, y: -2 }}
+                              layout
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                              transition={{
+                                type: "spring",
+                                stiffness: 500,
+                                damping: 50,
+                                mass: 1,
+                              }}
                             >
-                              <div
+                              <motion.div
                                 className={cn(
                                   "flex items-center justify-between p-4 rounded-lg",
                                   "bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md",
                                 )}
+                                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
                               >
                                 <div className="flex items-center gap-4">
                                   <motion.div
@@ -672,20 +704,21 @@ export default function Page() {
                                   {transaction.type === "top-up" ? "+" : "-"}
                                   {formatCurrency(Math.abs(transaction.amount))}
                                 </motion.div>
-                              </div>
+                              </motion.div>
                             </motion.div>
                           ))
                         ) : (
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             No transactions found
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
+                    </motion.div>
                   </CardContent>
                 </Card>
               </motion.div>
