@@ -119,10 +119,9 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
   // Check for system preference on mount
   React.useEffect(() => {
-    const isDark =
-      document.documentElement.classList.contains("dark") || window.matchMedia("(prefers-color-scheme: dark)").matches
-    setIsDarkMode(isDark)
-    document.documentElement.classList.toggle("dark", isDark)
+    // Always default to light mode
+    setIsDarkMode(false)
+    document.documentElement.classList.remove("dark")
   }, [])
 
   // Mouse follow effect
@@ -283,15 +282,15 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           ) : (
             <motion.button
               onClick={() => (window.location.href = "/login")}
-              className="w-full h-10 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 transition-colors duration-300"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              className="w-full h-8 rounded-md flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-800/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.3 }}
             >
-              <LogIn size={18} className="mr-2" />
-              <span className="font-medium">Login</span>
+              <LogIn size={14} className="mr-1" />
+              <span className="text-sm">Login</span>
             </motion.button>
           )}
 

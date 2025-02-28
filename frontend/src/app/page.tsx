@@ -1,12 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
-import { CreditCard, User, Wallet, ShoppingCart, X, Check, Plus, Minus, KeyRound } from "lucide-react"
+import { Dot, CreditCard, User, Wallet, ShoppingCart, X, Check, Plus, Minus, KeyRound, Scan } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
+import { Separator as SeparatorUI } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -99,6 +99,47 @@ function NotificationDialog({ isOpen, onClose, title, description, status }: Not
 }
 
 const AnimatedButton = motion(Button)
+
+function LiveCameraFeed() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user",
+        },
+      })
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err)
+    }
+  }, [])
+
+  useEffect(() => {
+    startCamera()
+
+    // Cleanup function to stop camera when component unmounts
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream
+        const tracks = stream.getTracks()
+        tracks.forEach((track) => track.stop())
+      }
+    }
+  }, [startCamera])
+
+  return (
+    <div className="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
+      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const [tempCard, setTempCard] = useState<(typeof rfidCards)[0] | null>(null)
@@ -246,7 +287,7 @@ export default function DashboardPage() {
           >
             <div className="flex items-center px-6">
               <SidebarTrigger />
-              <Separator orientation="vertical" className="mx-4 h-4" />
+              <SeparatorUI orientation="vertical" className="mx-4 h-4" />
               <motion.h1
                 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
                 initial={{ opacity: 0, x: -20 }}
@@ -338,7 +379,7 @@ export default function DashboardPage() {
           >
             <div className="flex items-center px-6">
               <SidebarTrigger />
-              <Separator orientation="vertical" className="mx-4 h-4" />
+              <SeparatorUI orientation="vertical" className="mx-4 h-4" />
               <motion.h1
                 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
                 initial={{ opacity: 0, x: -20 }}
@@ -445,7 +486,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center px-6">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mx-4 h-4" />
+            <SeparatorUI orientation="vertical" className="mx-4 h-4" />
             <motion.h1
               className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
               initial={{ opacity: 0, x: -20 }}
@@ -458,7 +499,7 @@ export default function DashboardPage() {
         </motion.header>
         <div className="flex-grow bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Enhanced User Information Card */}
+            {/* Enhanced User Information Card with Camera */}
             <motion.div
               className="flex flex-col gap-6"
               initial={{ opacity: 0, y: 20 }}
@@ -473,137 +514,31 @@ export default function DashboardPage() {
                       animate={{ rotate: 0 }}
                       transition={{ type: "spring", stiffness: 100 }}
                     >
-                      <User className="w-5 h-5 text-primary" />
+                      <Scan className="w-5 h-5 text-primary" />
                     </motion.div>
                     <motion.span
                       initial={{ x: -20, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
                       transition={{ delay: 0.2 }}
                     >
-                      User Information
+                      Scan Item Here
                     </motion.span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
+                  {/* Live Camera Feed */}
                   <motion.div
-                    className="space-y-6"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    className="mb-6 rounded-lg overflow-hidden bg-black"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <motion.div
-                      className="flex items-center gap-4 p-4 bg-primary/5 rounded-lg"
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    >
-                      <motion.div
-                        className="p-3 rounded-full bg-primary/10"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, delay: 0.4 }}
-                      >
-                        <User className="w-6 h-6 text-primary" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <motion.p
-                          className="text-sm text-gray-500 dark:text-gray-400"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 }}
-                        >
-                          Account Holder
-                        </motion.p>
-                        <motion.h3
-                          className="text-lg font-semibold text-gray-900 dark:text-gray-100"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.6 }}
-                        >
-                          {formData.name}
-                        </motion.h3>
-                      </div>
-                    </motion.div>
-
-                    <motion.div
-                      className="flex items-center gap-4 p-4 bg-primary/5 rounded-lg"
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    >
-                      <motion.div
-                        className="p-3 rounded-full bg-primary/10"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, delay: 0.6 }}
-                      >
-                        <CreditCard className="w-6 h-6 text-primary" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <motion.p
-                          className="text-sm text-gray-500 dark:text-gray-400"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.7 }}
-                        >
-                          Card Number
-                        </motion.p>
-                        <motion.h3
-                          className="text-lg font-semibold text-gray-900 dark:text-gray-100"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.8 }}
-                        >
-                          {formData.rfid}
-                        </motion.h3>
-                      </div>
-                    </motion.div>
-
-                    <motion.div
-                      className="flex items-center gap-4 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg"
-                      whileHover={{ scale: 1.02 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                    >
-                      <motion.div
-                        className="p-3 rounded-full bg-primary/10"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200, delay: 0.8 }}
-                      >
-                        <Wallet className="w-6 h-6 text-primary" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <motion.p
-                          className="text-sm text-gray-500 dark:text-gray-400"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.9 }}
-                        >
-                          Available Balance
-                        </motion.p>
-                        <motion.h3
-                          className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
-                          initial={{ y: 10, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 1 }}
-                        >
-                          {formatCurrency(scannedCard?.balance || 0)}
-                        </motion.h3>
-                      </div>
-                    </motion.div>
+                    <LiveCameraFeed />
                   </motion.div>
                 </CardContent>
               </Card>
 
-              <motion.div className="grid grid-cols-2 gap-4">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    onClick={simulateScan}
-                    className="w-full h-12 bg-primary text-primary-foreground font-medium"
-                    disabled={isProcessing}
-                  >
-                    <CreditCard className="w-5 h-5 mr-2" />
-                    Scan Card
-                  </Button>
-                </motion.div>
+              <motion.div className="grid grid-cols-1 gap-4">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button
                     onClick={simulateProductScan}
@@ -696,32 +631,74 @@ export default function DashboardPage() {
         >
           <div className="container mx-auto px-6 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-4">
+              <motion.div
+                className="flex items-center gap-4"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Wallet className="h-6 w-6 text-primary" />
-                  </div>
+                  <motion.div
+                    className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                    whileHover={{ rotate: 15, backgroundColor: "var(--primary)" }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <User className="w-5 h-5 text-primary group-hover:text-primary-foreground" />
+                  </motion.div>
+
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Current Balance</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                      {formData.name}
+                    </p>
+                  </div>
+                </div>
+                <Dot orientation="vertical" />
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                    whileHover={{ rotate: -15, backgroundColor: "var(--primary)" }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Wallet className="w-5 h-5 text-primary group-hover:text-primary-foreground" />
+                  </motion.div>
+                  <div>
+              
+                    <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                       {formatCurrency(scannedCard?.balance || 0)}
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
               <div className="flex items-center gap-6">
-                <div>
+                <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total Price</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalPrice)}</p>
-                </div>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <p className="text-2xl font-bold bg-gradient-to-br from-gray-700 to-black dark:from-gray-300 dark:to-white bg-clip-text text-transparent">
+                    {formatCurrency(totalPrice)}
+                  </p>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
                   <Button
                     onClick={handlePay}
-                    className="h-12 px-6 bg-primary text-primary-foreground font-medium"
+                    className="h-12 px-6 bg-primary text-primary-foreground font-medium relative overflow-hidden group"
                     disabled={!scannedCard || scannedProducts.length === 0}
                   >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Pay Now
+                    <motion.div
+                      className="absolute inset-0 bg-primary-foreground opacity-0 group-hover:opacity-10"
+                      initial={{ x: "-100%" }}
+                      whileHover={{ x: "0%" }}
+                      transition={{ duration: 0.3 }}
+                    />
+                    <motion.div
+                      className="flex items-center relative z-10"
+                      whileHover={{ x: 5 }}
+                      transition={{ type: "spring", stiffness: 400 }}
+                    >
+                      <ShoppingCart className="w-5 h-5 mr-2" />
+                      Pay Now
+                    </motion.div>
                   </Button>
                 </motion.div>
               </div>
