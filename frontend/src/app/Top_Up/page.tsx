@@ -454,7 +454,7 @@ export default function Page() {
                 transition={{ type: "spring" }}
               >
                 <Alert className="mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
-                  <CreditCard className="h-4 w-4 text-primary" />
+                  <CreditCard className="h-7 w-4 text-primary" />
                   <AlertDescription className="flex items-center text-gray-700 dark:text-gray-300">
                     Card ID: {nfcId}
                     <AnimatedButton

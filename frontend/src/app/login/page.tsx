@@ -61,7 +61,7 @@ export default function LoginPage() {
         <Card className="w-full max-w-md backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Welcome to PKasir
+              hai admin hehe boi\(^_^)/
             </CardTitle>
           </CardHeader>
           <CardContent>

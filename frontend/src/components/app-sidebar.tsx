@@ -164,17 +164,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="p-4 relative z-10">
         <motion.div className="flex items-center gap-2" initial="initial" animate="animate" variants={logoVariants}>
           <motion.div
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500 text-white"
+            className="flex items-center justify-center w-8 h-8"
+            onClick={() => window.open("https://smamuhpksolo.sch.id/", "_blank")}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <span className="font-bold text-lg">P</span>
+            <img src="https://www.pkbestsmamuhpk.sch.id/logo.png"></img>
           </motion.div>
           <div className="leading-none">
             <motion.span
               className="font-semibold block text-lg"
               onClick={() => window.open("https://github.com/SiHantuuu/PKasir", "_blank")}
-              whileHover={{ color: "rgb(59, 130, 246)" }}
+              whileHover={{ color: "rgb(59, 130, 246)", scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
               <b>PKasir</b>
@@ -183,6 +184,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               className="text-sm text-gray-500 dark:text-gray-400"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, transition: { delay: 0.3, duration: 0.3 } }}
+              whileHover={{ scale: 1.1, color: "rgb(59, 130, 246)" }}
+              transition={{ duration: 0.2 }}
             >
               v100
             </motion.span>

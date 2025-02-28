@@ -3,8 +3,8 @@
 import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
-import { Dot, CreditCard, User, Wallet, ShoppingCart, X, Check, Plus, Minus, KeyRound, Scan } from "lucide-react"
-
+import { Dot, CreditCard, User, ShoppingCart, X, Check, Plus, Minus, KeyRound, Scan, Banknote } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Separator as SeparatorUI } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -26,6 +26,15 @@ const products = [
   { id: "P001", name: "Product A", price: 10000 },
   { id: "P002", name: "Product B", price: 15000 },
   { id: "P003", name: "Product C", price: 20000 },
+  { id: "P004", name: "Product D", price: 10000 },
+  { id: "P005", name: "Product E", price: 15000 },
+  { id: "P006", name: "Product F", price: 20000 },
+  { id: "P007", name: "Product G", price: 10000 },
+  { id: "P008", name: "Product H", price: 15000 },
+  { id: "P009", name: "Product I", price: 20000 },
+  { id: "P010", name: "Product J", price: 10000 },
+  { id: "P011", name: "Product K", price: 15000 },
+  { id: "P012", name: "Product L", price: 20000 },
 ]
 
 type ScannedProduct = {
@@ -102,6 +111,9 @@ const AnimatedButton = motion(Button)
 
 function LiveCameraFeed() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [isCapturing, setIsCapturing] = useState(false)
 
   const startCamera = useCallback(async () => {
     try {
@@ -121,6 +133,52 @@ function LiveCameraFeed() {
     }
   }, [])
 
+  const stopCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
+      const tracks = stream.getTracks()
+      tracks.forEach((track) => track.stop())
+    }
+  }, [])
+
+  const capturePhoto = useCallback(() => {
+    if (videoRef.current && canvasRef.current) {
+      setIsCapturing(true)
+
+      // Add a small delay for the capturing animation
+      setTimeout(() => {
+        const video = videoRef.current
+        const canvas = canvasRef.current
+        const context = canvas?.getContext("2d")
+        if (!context) {
+          console.error("Failed to get canvas context")
+          setIsCapturing(false)
+          return
+        }
+
+        if (video && canvas && context) {
+          // Set canvas dimensions to match video
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+
+          // Draw the current video frame to the canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+          // Convert canvas to data URL and set as captured image
+          const imageDataUrl = canvas.toDataURL("image/png")
+          setCapturedImage(imageDataUrl)
+          setIsCapturing(false)
+
+          // Stop the camera after capturing the photo
+          stopCamera()
+        } else {
+          console.error("Video or canvas element not available")
+          setIsCapturing(false)
+        }
+      }, 500)
+    }
+  }, [stopCamera])
+
   useEffect(() => {
     startCamera()
 
@@ -135,8 +193,61 @@ function LiveCameraFeed() {
   }, [startCamera])
 
   return (
-    <div className="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
-      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+    <div className="flex flex-col gap-4">
+      <div className="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden">
+        {capturedImage ? (
+          <img src={capturedImage || "/placeholder.svg"} alt="Captured photo" className="w-full h-full object-cover" />
+        ) : (
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+        )}
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* Flash animation when capturing */}
+        <AnimatePresence>
+          {isCapturing && (
+            <motion.div
+              className="absolute inset-0 bg-white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.8 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {!capturedImage && (
+          <motion.div
+            key="capture-button"
+            initial={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20, scale: 0.8 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AnimatedButton
+              onClick={capturePhoto}
+              className="w-full h-12 bg-primary text-primary-foreground font-medium"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              disabled={isCapturing}
+            >
+              {isCapturing ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                >
+                  <Scan className="w-5 h-5 mr-2" />
+                </motion.div>
+              ) : (
+                <>
+                  <Scan className="w-5 h-5 mr-2" />
+                  Take Photo
+                </>
+              )}
+            </AnimatedButton>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -234,6 +345,12 @@ export default function DashboardPage() {
         status: "success",
       })
       setScannedProducts([])
+
+      // Reset card states after a delay to return to scan card page
+      setTimeout(() => {
+        setScannedCard(null)
+        setTempCard(null)
+      }, 2000) // 2 second delay to allow user to see the success message
     }
   }
 
@@ -562,60 +679,62 @@ export default function DashboardPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <AnimatePresence mode="popLayout">
-                    {scannedProducts.length === 0 ? (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="text-center py-8"
-                      >
-                        <ShoppingCart className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">No products scanned yet</p>
-                      </motion.div>
-                    ) : (
-                      <div className="space-y-4">
-                        {scannedProducts.map((product) => (
-                          <motion.div
-                            key={product.id}
-                            layout
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-lg p-4 shadow-sm"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h3 className="font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                  {formatCurrency(product.price)} × {product.quantity}
-                                </p>
+                  <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
+                    <AnimatePresence mode="popLayout">
+                      {scannedProducts.length === 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-center py-8"
+                        >
+                          <ShoppingCart className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                          <p className="text-gray-500 dark:text-gray-400">No products scanned yet</p>
+                        </motion.div>
+                      ) : (
+                        <div className="space-y-4">
+                          {scannedProducts.map((product) => (
+                            <motion.div
+                              key={product.id}
+                              layout
+                              initial={{ opacity: 0, y: -20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 20 }}
+                              className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm rounded-lg p-4 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{product.name}</h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {formatCurrency(product.price)} × {product.quantity}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleUpdateQuantity(product.id, "decrease")}
+                                    className="p-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </motion.button>
+                                  <span className="w-8 text-center font-medium">{product.quantity}</span>
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleUpdateQuantity(product.id, "increase")}
+                                    className="p-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </motion.button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleUpdateQuantity(product.id, "decrease")}
-                                  className="p-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </motion.button>
-                                <span className="w-8 text-center font-medium">{product.quantity}</span>
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleUpdateQuantity(product.id, "increase")}
-                                  className="p-1 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </motion.button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </AnimatePresence>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </ScrollArea>
                 </CardContent>
               </Card>
             </motion.div>
@@ -636,53 +755,46 @@ export default function DashboardPage() {
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                <div className="flex items-center gap-3">
-                  <motion.div
+                <div className="flex items-center gap-1">
+                  {/* <motion.div
                     className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
                     whileHover={{ rotate: 15, backgroundColor: "var(--primary)" }}
                     transition={{ duration: 0.2 }}
                   >
-                    <User className="w-5 h-5 text-primary group-hover:text-primary-foreground" />
-                  </motion.div>
-
-                  <div>
+                  </motion.div> */}
+                  <motion.div whileHover={{ scale: 1.05 }}>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Username</p>
                     <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                      <User className="inline-block w-5 h-5 mr-2 text-primary" />
                       {formData.name}
                     </p>
-                  </div>
-                </div>
-                <Dot orientation="vertical" />
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
-                    whileHover={{ rotate: -15, backgroundColor: "var(--primary)" }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Wallet className="w-5 h-5 text-primary group-hover:text-primary-foreground" />
                   </motion.div>
+                  <div></div>
+                </div>
+                <Dot orientation="vertical" opacity="0" />
+                <div className="flex items-center gap-3">
                   <div>
-              
+                    <motion.div whileHover={{ scale: 1.05 }}>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Total Balance</p>
+                    </motion.div>
                     <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                      <Banknote className="inline-block w-5 h-5 mr-2 text-primary" />
                       {formatCurrency(scannedCard?.balance || 0)}
                     </p>
                   </div>
                 </div>
               </motion.div>
               <div className="flex items-center gap-6">
-                <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
+                <motion.div whileHover={{ scale: 1.05 }}>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total Price</p>
-                  <p className="text-2xl font-bold bg-gradient-to-br from-gray-700 to-black dark:from-gray-300 dark:to-white bg-clip-text text-transparent">
+                  <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                     {formatCurrency(totalPrice)}
                   </p>
                 </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
                     onClick={handlePay}
-                    className="h-12 px-6 bg-primary text-primary-foreground font-medium relative overflow-hidden group"
+                    className="h-12 px-6 bg-primary text-primary-foreground font-medium relative                    className=&quot                    px-6 bg-primary text-primary-foreground font-medium relative overflow-hidden group"
                     disabled={!scannedCard || scannedProducts.length === 0}
                   >
                     <motion.div
@@ -696,8 +808,8 @@ export default function DashboardPage() {
                       whileHover={{ x: 5 }}
                       transition={{ type: "spring", stiffness: 400 }}
                     >
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      Pay Now
+                      <Banknote className="w-5 h-5 mr-2" />
+                      Pay
                     </motion.div>
                   </Button>
                 </motion.div>

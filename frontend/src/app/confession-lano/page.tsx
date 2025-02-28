@@ -20,8 +20,8 @@ export default function ConfessionPage() {
     "Dear Salsa,",
     "Aku sudah lama menyimpan perasaan ini...",
     "Setiap kali melihatmu tersenyum, hatiku berdebar tidak karuan.",
-    "Aku menyukaimu, Salsa.",
-    "Maukah kamu menjadi pacarku?",
+    "Aku menyayangimu, Salsa.",
+    "Maukah kamu menjadi istriku?",
     "- Lano",
   ]
 

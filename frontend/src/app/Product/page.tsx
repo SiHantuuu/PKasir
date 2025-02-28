@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogTrigger } from "@/components/ui/dialog"
+
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
@@ -11,13 +13,124 @@ import { Button } from "@/components/ui/button"
 import { PlusCircle, Search, ChevronLeft, ChevronRight, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 
 const ITEMS_PER_PAGE = 8 // Changed back to 8 products per page
+
+// Sample categories
+const categories = ["All", "Electronics", "Clothing", "Home"]
+
+function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [name, setName] = useState("")
+  const [price, setPrice] = useState("")
+  const [category, setCategory] = useState("")
+  const [image, setImage] = useState("/placeholder.svg")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Inside the NewItemDialog component, add this useEffect hook
+  useEffect(() => {
+    if (!isOpen) {
+      setName("")
+      setPrice("")
+      setCategory("")
+      setImage("/placeholder.svg")
+    }
+  }, [isOpen])
+
+  // Modify the handleSubmit function
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log("New Item:", { name, price: Number.parseFloat(price), category, image })
+    // Reset the form
+    setName("")
+    setPrice("")
+    setCategory("")
+    setImage("/placeholder.svg")
+    onClose()
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Product</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="image">Product Image</Label>
+            <div className="relative h-40 bg-gray-100 rounded-md overflow-hidden">
+              <Image src={image || "/placeholder.svg"} alt="Preview" fill className="object-contain" />
+            </div>
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              ref={fileInputRef}
+              className="hidden"
+            />
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+              Choose Image
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Product Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter product name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="price">Price</Label>
+            <Input
+              id="price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Enter product price"
+              step="0.01"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit">Add Product</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default function Page() {
   const router = useRouter()
@@ -32,13 +145,14 @@ export default function Page() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pageDirection, setPageDirection] = useState(0)
+  const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false)
 
   // Sample product data
   const products = [
-    { id: 1, name: "Product 1", price: 19.99, image: "/placeholder.svg", category: "Electronics" },
-    { id: 2, name: "Product 2", price: 29.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 3, name: "Product 3", price: 39.99, image: "/placeholder.svg", category: "Home" },
-    { id: 4, name: "Product 4", price: 49.99, image: "/placeholder.svg", category: "Electronics" },
+    { id: 1, name: "Litos", price: 19.99, image: "/images/litos.png", category: "Electronics" },
+    { id: 2, name: "Floridina", price: 19.99, image: "/images/floridina.png", category: "Clothing" },
+    { id: 3, name: "Cimory UHT Fresh Milk", price: 19.99, image: "/images/cimory_milk.png", category: "Home" },
+    { id: 4, name: "Gopek", price: 19.99, image: "/images/gopek.png", category: "Electronics" },
     { id: 5, name: "Product 5", price: 59.99, image: "/placeholder.svg", category: "Clothing" },
     { id: 6, name: "Product 6", price: 69.99, image: "/placeholder.svg", category: "Home" },
     { id: 7, name: "Product 7", price: 79.99, image: "/placeholder.svg", category: "Electronics" },
@@ -54,9 +168,6 @@ export default function Page() {
     { id: 17, name: "Product 17", price: 179.99, image: "/placeholder.svg", category: "Clothing" },
     { id: 18, name: "Product 18", price: 189.99, image: "/placeholder.svg", category: "Home" },
   ]
-
-  // Sample categories
-  const categories = ["All", "Electronics", "Clothing", "Home"]
 
   const handleCreateCategory = () => {
     console.log("New category created:", newCategory)
@@ -253,7 +364,7 @@ export default function Page() {
                     <Button onClick={handleCreateCategory}>Create Category</Button>
                   </DialogContent>
                 </Dialog>
-                <Button onClick={() => router.push("/Product/new")} className="bg-primary text-primary-foreground">
+                <Button onClick={() => setIsNewItemDialogOpen(true)} className="bg-primary text-primary-foreground">
                   <PlusCircle className="mr-2 h-4 w-4" /> New Item
                 </Button>
               </motion.div>
@@ -350,12 +461,21 @@ export default function Page() {
                 <Label htmlFor="category" className="text-right">
                   Category
                 </Label>
-                <Input
-                  id="category"
+                <Select
                   value={selectedProduct.category}
-                  onChange={(e) => setSelectedProduct({ ...selectedProduct, category: e.target.value })}
-                  className="col-span-3"
-                />
+                  onValueChange={(value) => setSelectedProduct({ ...selectedProduct, category: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="image" className="text-right">
@@ -398,6 +518,7 @@ export default function Page() {
           </motion.div>
         </DialogContent>
       </Dialog>
+      <NewItemDialog isOpen={isNewItemDialogOpen} onClose={() => setIsNewItemDialogOpen(false)} />
     </SidebarProvider>
   )
 }
