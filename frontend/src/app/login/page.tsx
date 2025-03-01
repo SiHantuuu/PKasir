@@ -10,15 +10,26 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogIn, User, Lock, AlertCircle, CheckCircle } from "lucide-react"
+import { LogIn, User, Lock, AlertCircle } from "lucide-react"
+import { NotificationDialog } from "@/components/notification-dialog"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
   const { login } = useAuth()
   const router = useRouter()
+  const [notification, setNotification] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    status: "success" | "error"
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    status: "success",
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,11 +38,16 @@ export default function LoginPage() {
     // Here you would typically validate the credentials against a backend
     // For this example, we'll use a simple check
     if (username === "admin" && password === "password") {
-      setSuccessMessage("Login successful! Redirecting...")
+      setNotification({
+        isOpen: true,
+        title: "Login Successful",
+        description: "You will be redirected to the dashboard shortly.",
+        status: "success",
+      })
       login(username)
       setTimeout(() => {
         router.push("/")
-      }, 2000) // Redirect after 2 seconds
+      }, 1000) // Redirect after 2 seconds
     } else {
       setError("Invalid username or password")
     }
@@ -128,18 +144,15 @@ export default function LoginPage() {
                 </Button>
               </motion.div>
             </form>
-            {successMessage && (
-              <motion.div
-                className="mt-4 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md flex items-center space-x-2"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <CheckCircle size={18} />
-                <span>{successMessage}</span>
-              </motion.div>
-            )}
           </CardContent>
         </Card>
+        <NotificationDialog
+          isOpen={notification.isOpen}
+          onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+          title={notification.title}
+          description={notification.description}
+          status={notification.status}
+        />
       </motion.div>
     </div>
   )

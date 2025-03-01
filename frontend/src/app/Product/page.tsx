@@ -71,23 +71,7 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
           <DialogTitle>Add New Product</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="image">Product Image</Label>
-            <div className="relative h-40 bg-gray-100 rounded-md overflow-hidden">
-              <Image src={image || "/placeholder.svg"} alt="Preview" fill className="object-contain" />
-            </div>
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              ref={fileInputRef}
-              className="hidden"
-            />
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
-              Choose Image
-            </Button>
-          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="name">Product Name</Label>
             <Input
@@ -124,6 +108,23 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="image">Product Image</Label>
+            <div className="relative h-40 bg-gray-100 rounded-md overflow-hidden">
+              <Image src={image || "/placeholder.svg"} alt="Preview" fill className="object-contain" />
+            </div>
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              ref={fileInputRef}
+              className="hidden"
+            />
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+              Choose Image
+            </Button>
           </div>
           <Button type="submit">Add Product</Button>
         </form>

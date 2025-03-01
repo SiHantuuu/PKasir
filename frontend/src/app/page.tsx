@@ -284,10 +284,10 @@ export default function DashboardPage() {
 
     // Special PIN for Lano's confession page
     if (pin === "1417") {
-      // Navigate to the confession page
-      window.location.href = "/confession-lano"
-      return
-    }
+   // Navigate to the confession page
+   window.location.href = "/confession-lano"
+   return
+     }
     if (tempCard && pin === tempCard.pin) {
       setScannedCard(tempCard)
       setPinError(false)

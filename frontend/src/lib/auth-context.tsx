@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsername(null)
     localStorage.removeItem("isAuthenticated")
     localStorage.removeItem("username")
+    window.location.href = "/"
   }
 
   return <AuthContext.Provider value={{ isAuthenticated, username, login, logout }}>{children}</AuthContext.Provider>

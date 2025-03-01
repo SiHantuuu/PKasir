@@ -18,6 +18,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/lib/auth-context"
+import { NotificationDialog } from "@/components/notification-dialog"
+import { useState } from "react"
 
 type MenuItem = {
   title: string
@@ -110,18 +112,46 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isDarkMode, setIsDarkMode] = React.useState(false)
   const { isAuthenticated, login, logout, username } = useAuth()
 
+  const [notification, setNotification] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    status: "success" | "error"
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    status: "success",
+  })
+
   // Theme toggle function
   const toggleTheme = () => {
     const newTheme = !isDarkMode
     setIsDarkMode(newTheme)
     document.documentElement.classList.toggle("dark", newTheme)
+    localStorage.setItem("theme", newTheme ? "dark" : "light")
+  }
+
+  // Modify the logout function to redirect to dashboard
+  const handleLogout = () => {
+    logout()
+    setNotification({
+      isOpen: true,
+      title: "Sign Out Successful",
+      description: "You have been successfully signed out.",
+      status: "success",
+    })
+    setTimeout(() => {
+      window.location.href = "/"
+    }, 2000) // Redirect after 2 seconds
   }
 
   // Check for system preference on mount
   React.useEffect(() => {
-    // Always default to light mode
-    setIsDarkMode(false)
-    document.documentElement.classList.remove("dark")
+    const savedTheme = localStorage.getItem("theme")
+    const isDark = savedTheme === "dark"
+    setIsDarkMode(isDark)
+    document.documentElement.classList.toggle("dark", isDark)
   }, [])
 
   // Mouse follow effect
@@ -141,7 +171,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   // Gradient follow effect
   const background = useMotionTemplate`
     radial-gradient(
-      250px circle at ${mouseX}px ${mouseY}px,
+      350px circle at ${mouseX}px ${mouseY}px,
       var(--blue-glow) 0%,
       transparent 80%
     )
@@ -154,6 +184,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     <Sidebar
       {...props}
       className="bg-white dark:bg-gray-900 transition-all duration-500 ease-in-out border-r dark:border-gray-800"
+      style={{ "--blue-glow": "rgba(59, 130, 246, 0.15)" } as React.CSSProperties}
     >
       <motion.div
         className="absolute inset-0 z-0 opacity-30 dark:opacity-20 pointer-events-none"
@@ -173,7 +204,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </motion.div>
           <div className="leading-none">
             <motion.span
-              className="font-semibold block text-lg"
+              // className="font-semibold block text-lg"
+              className="font-semibold block text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
               onClick={() => window.open("https://github.com/SiHantuuu/PKasir", "_blank")}
               whileHover={{ color: "rgb(59, 130, 246)", scale: 1.05 }}
               transition={{ duration: 0.2 }}
@@ -251,6 +283,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter className="p-4 relative z-10">
+        {isAuthenticated && (
+          <div className="mb-3 text-center">
+            <motion.p
+              className="text-sm text-gray-500 dark:text-gray-400"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+            >
+              Logged in as: <span className="font-medium text-blue-500">{username}</span>
+            </motion.p>
+          </div>
+        )}
         <motion.div
           className="h-px w-full bg-gray-200 dark:bg-gray-800 mb-4"
           initial={{ scaleX: 0 }}
@@ -258,100 +302,102 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           transition={{ delay: 0.6, duration: 0.5 }}
         />
 
-        <div className="flex flex-col gap-3">
-          {isAuthenticated ? (
-            <>
-              <motion.div
-                className="text-sm text-gray-600 dark:text-gray-400 text-center"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.3 }}
-              >
-                Logged in as: {username}
-              </motion.div>
+        <div className="flex justify-between w-full">
+          {/* Left corner - Login/Logout button */}
+          <div>
+            {isAuthenticated ? (
               <motion.button
-                onClick={logout}
-                className="w-full h-10 rounded-xl flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 transition-colors duration-300"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                onClick={handleLogout}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 transition-colors duration-300"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                whileTap={{ scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.8, duration: 0.3 }}
+                aria-label="Sign Out"
               >
-                <LogOut size={18} className="mr-2" />
-                <span className="font-medium">Sign Out</span>
+                <LogOut size={18} />
               </motion.button>
-            </>
-          ) : (
-            <motion.button
-              onClick={() => (window.location.href = "/login")}
-              className="w-full h-8 rounded-md flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-800/30 text-blue-600 dark:text-blue-400 transition-colors duration-300"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.3 }}
-            >
-              <LogIn size={14} className="mr-1" />
-              <span className="text-sm">Login</span>
-            </motion.button>
-          )}
+            ) : (
+              <motion.button
+                onClick={() => (window.location.href = "/login")}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 transition-colors duration-300"
+                whileHover={{ scale: 1.1, rotate: -5 }}
+                whileTap={{ scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7, duration: 0.3 }}
+                aria-label="Login"
+              >
+                <LogIn size={18} />
+              </motion.button>
+            )}
+          </div>
 
-          <motion.button
-            onClick={toggleTheme}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300"
-            whileHover={{
-              scale: 1.1,
-              rotate: isDarkMode ? -15 : 15,
-            }}
-            whileTap={{ scale: 0.9 }}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.9, duration: 0.3 }}
-            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            <div className="relative w-6 h-6 flex items-center justify-center overflow-hidden">
-              <motion.div
-                className="absolute"
-                initial={false}
-                animate={{
-                  opacity: isDarkMode ? 0 : 1,
-                  y: isDarkMode ? -20 : 0,
-                  rotate: isDarkMode ? -45 : 0,
-                  scale: isDarkMode ? 0.5 : 1,
-                }}
-                transition={{
-                  duration: 0.4,
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 25,
-                }}
-              >
-                <Sun size={20} className="text-yellow-500" />
-              </motion.div>
-              <motion.div
-                className="absolute"
-                initial={false}
-                animate={{
-                  opacity: isDarkMode ? 1 : 0,
-                  y: isDarkMode ? 0 : 20,
-                  rotate: isDarkMode ? 0 : 45,
-                  scale: isDarkMode ? 1 : 0.5,
-                }}
-                transition={{
-                  duration: 0.4,
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 25,
-                }}
-              >
-                <Moon size={20} className="text-blue-400" />
-              </motion.div>
-            </div>
-          </motion.button>
+          {/* Right corner - Theme toggle button */}
+          <div>
+            <motion.button
+              onClick={toggleTheme}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300"
+              whileHover={{
+                scale: 1.1,
+                rotate: isDarkMode ? -15 : 15,
+              }}
+              whileTap={{ scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.9, duration: 0.3 }}
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              <div className="relative w-6 h-6 flex items-center justify-center overflow-hidden">
+                <motion.div
+                  className="absolute"
+                  initial={false}
+                  animate={{
+                    opacity: isDarkMode ? 0 : 1,
+                    y: isDarkMode ? -20 : 0,
+                    rotate: isDarkMode ? -45 : 0,
+                    scale: isDarkMode ? 0.5 : 1,
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                  }}
+                >
+                  <Sun size={20} className="text-yellow-500" />
+                </motion.div>
+                <motion.div
+                  className="absolute"
+                  initial={false}
+                  animate={{
+                    opacity: isDarkMode ? 1 : 0,
+                    y: isDarkMode ? 0 : 20,
+                    rotate: isDarkMode ? 0 : 45,
+                    scale: isDarkMode ? 1 : 0.5,
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                  }}
+                >
+                  <Moon size={20} className="text-blue-400" />
+                </motion.div>
+              </div>
+            </motion.button>
+          </div>
         </div>
       </SidebarFooter>
-
+      <NotificationDialog
+        isOpen={notification.isOpen}
+        onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+        title={notification.title}
+        description={notification.description}
+        status={notification.status}
+      />
       <SidebarRail />
     </Sidebar>
   )
