@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   BarChart,
   Bar,
@@ -20,7 +19,7 @@ import {
   LineChart,
   Line,
 } from "recharts"
-import { AlertTriangle, TrendingUp, TrendingDown, BarChartIcon, PieChartIcon, LineChartIcon } from "lucide-react"
+import { TrendingUp, TrendingDown, BarChartIcon, PieChartIcon, LineChartIcon } from "lucide-react"
 
 interface Product {
   id: number
@@ -44,13 +43,6 @@ const productSalesData = [
   { name: "Product 6", sales: 38, revenue: 760000 },
   { name: "Product 7", sales: 30, revenue: 600000 },
   { name: "Product 8", sales: 25, revenue: 500000 },
-]
-
-const neverPurchasedProducts = [
-  { name: "Product 9", daysInStock: 120 },
-  { name: "Product 10", daysInStock: 90 },
-  { name: "Product 11", daysInStock: 75 },
-  { name: "Product 12", daysInStock: 60 },
 ]
 
 const categorySalesData = [
@@ -149,20 +141,13 @@ export default function ProductAnalytics({ products }: ProductAnalyticsProps) {
 
       <motion.div variants={itemVariants}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-md">
+          <TabsList className="grid grid-cols-2 mb-6 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-md">
             <TabsTrigger
               value="best-sellers"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <BarChartIcon className="w-4 h-4 mr-2" />
               Best Sellers
-            </TabsTrigger>
-            <TabsTrigger
-              value="never-purchased"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Never Purchased
             </TabsTrigger>
             <TabsTrigger
               value="trends"
@@ -250,62 +235,6 @@ export default function ProductAnalytics({ products }: ProductAnalyticsProps) {
                           </Pie>
                           <Tooltip content={<CustomTooltip />} />
                         </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="never-purchased" className="mt-0">
-              <motion.div
-                key="never-purchased"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center">
-                      <AlertTriangle className="w-5 h-5 mr-2 text-primary" />
-                      Products Never Purchased
-                    </CardTitle>
-                    <CardDescription>Products that have not been sold yet</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Alert className="mb-6 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      <AlertTitle className="text-amber-800 dark:text-amber-300">Attention Required</AlertTitle>
-                      <AlertDescription className="text-amber-700 dark:text-amber-400">
-                        These products have been in stock but have not been purchased. Consider promotions or removing
-                        them from inventory.
-                      </AlertDescription>
-                    </Alert>
-
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={neverPurchasedProducts}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                          layout="vertical"
-                        >
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={false} />
-                          <XAxis type="number" />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar
-                            dataKey="daysInStock"
-                            fill="var(--color-destructive)"
-                            radius={[0, 4, 4, 0]}
-                            animationDuration={1500}
-                            animationBegin={animateCharts ? 600 : 9999}
-                          >
-                            {neverPurchasedProducts.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={`hsl(var(--destructive) / ${1 - index * 0.15})`} />
-                            ))}
-                          </Bar>
-                        </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </CardContent>
