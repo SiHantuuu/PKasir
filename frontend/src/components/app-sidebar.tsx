@@ -3,7 +3,18 @@
 import * as React from "react"
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ShoppingCart, History, CreditCard, Sun, Moon, LogIn, LogOut } from "lucide-react"
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  History,
+  CreditCard,
+  LogIn,
+  LogOut,
+  GraduationCap,
+  Sun,
+  Moon,
+  Wallet,
+} from "lucide-react"
 
 import {
   Sidebar,
@@ -32,6 +43,13 @@ const navMain: MenuItem[] = [
   { title: "Product", url: "/Product", icon: ShoppingCart },
   { title: "History", url: "/History", icon: History },
   { title: "Top Up", url: "/Top_Up", icon: CreditCard },
+  { title: "Users", url: "/Users", icon: GraduationCap },
+]
+
+// Add myWallet to navigation for non-logged in users
+const navNonAuth: MenuItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "My Wallet", url: "/myWallet", icon: Wallet },
 ]
 
 // Enhanced menu item animations
@@ -178,7 +196,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   `
 
   // Filter menu items based on authentication status
-  const visibleMenuItems = isAuthenticated ? navMain : navMain.filter((item) => item.title === "Dashboard")
+  const visibleMenuItems = isAuthenticated ? navMain : navNonAuth
 
   return (
     <Sidebar
@@ -301,94 +319,37 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           animate={{ scaleX: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         />
-
-        <div className="flex justify-between w-full">
-          {/* Left corner - Login/Logout button */}
-          <div>
-            {isAuthenticated ? (
-              <motion.button
-                onClick={handleLogout}
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 transition-colors duration-300"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                whileTap={{ scale: 0.9 }}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8, duration: 0.3 }}
-                aria-label="Sign Out"
-              >
-                <LogOut size={18} />
-              </motion.button>
-            ) : (
-              <motion.button
-                onClick={() => (window.location.href = "/login")}
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 transition-colors duration-300"
-                whileHover={{ scale: 1.1, rotate: -5 }}
-                whileTap={{ scale: 0.9 }}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7, duration: 0.3 }}
-                aria-label="Login"
-              >
-                <LogIn size={18} />
-              </motion.button>
-            )}
-          </div>
-
-          {/* Right corner - Theme toggle button */}
-          <div>
+        <div className="flex justify-between items-center">
+          <motion.button
+            onClick={toggleTheme}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-500" />}
+          </motion.button>
+          {!isAuthenticated ? (
             <motion.button
-              onClick={toggleTheme}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300"
-              whileHover={{
-                scale: 1.1,
-                rotate: isDarkMode ? -15 : 15,
-              }}
-              whileTap={{ scale: 0.9 }}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.9, duration: 0.3 }}
-              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={() => (window.location.href = "/login")}
+              className="flex-1 ml-4 py-2 px-4 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <div className="relative w-6 h-6 flex items-center justify-center overflow-hidden">
-                <motion.div
-                  className="absolute"
-                  initial={false}
-                  animate={{
-                    opacity: isDarkMode ? 0 : 1,
-                    y: isDarkMode ? -20 : 0,
-                    rotate: isDarkMode ? -45 : 0,
-                    scale: isDarkMode ? 0.5 : 1,
-                  }}
-                  transition={{
-                    duration: 0.4,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 25,
-                  }}
-                >
-                  <Sun size={20} className="text-yellow-500" />
-                </motion.div>
-                <motion.div
-                  className="absolute"
-                  initial={false}
-                  animate={{
-                    opacity: isDarkMode ? 1 : 0,
-                    y: isDarkMode ? 0 : 20,
-                    rotate: isDarkMode ? 0 : 45,
-                    scale: isDarkMode ? 1 : 0.5,
-                  }}
-                  transition={{
-                    duration: 0.4,
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 25,
-                  }}
-                >
-                  <Moon size={20} className="text-blue-400" />
-                </motion.div>
-              </div>
+              <LogIn size={18} className="mr-2" />
+              <span>Login</span>
             </motion.button>
-          </div>
+          ) : (
+            <motion.button
+              onClick={handleLogout}
+              className="flex-1 ml-4 py-2 px-4 rounded-lg flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 transition-colors duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <LogOut size={18} className="mr-2" />
+              <span>Sign Out</span>
+            </motion.button>
+          )}
         </div>
       </SidebarFooter>
       <NotificationDialog

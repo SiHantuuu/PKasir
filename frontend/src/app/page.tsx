@@ -284,10 +284,10 @@ export default function DashboardPage() {
 
     // Special PIN for Lano's confession page
     if (pin === "1417") {
-   // Navigate to the confession page
-   window.location.href = "/confession-lano"
-   return
-     }
+      // Navigate to the confession page
+      window.location.href = "/confession-lano"
+      return
+    }
     if (tempCard && pin === tempCard.pin) {
       setScannedCard(tempCard)
       setPinError(false)
@@ -625,7 +625,7 @@ export default function DashboardPage() {
             >
               <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
                 <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="text-xl flex font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent items-center gap-2">
                     <motion.div
                       initial={{ rotate: -180 }}
                       animate={{ rotate: 0 }}
@@ -663,7 +663,7 @@ export default function DashboardPage() {
                     disabled={!scannedCard}
                   >
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    Scan Product
+                    Simulate Scan Product
                   </Button>
                 </motion.div>
               </motion.div>
@@ -672,8 +672,8 @@ export default function DashboardPage() {
             {/* Scanned Products Card */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
               <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg h-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="border-b border-gray-100 dark:border-gray-700">
+                  <CardTitle className="text-xl flex font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent items-center gap-2">
                     <ShoppingCart className="w-5 h-5 text-primary" />
                     Scanned Products
                   </CardTitle>

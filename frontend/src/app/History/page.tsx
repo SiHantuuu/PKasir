@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { X, DollarSign, Calendar, User, Search, ArrowRight, FileSpreadsheet } from "lucide-react"
+import { DollarSign, Calendar, User, Search, ArrowRight, FileSpreadsheet } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
@@ -110,21 +110,11 @@ function PurchaseDetailsDialog({
       <DialogContent className="sm:max-w-[425px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
         <DialogHeader>
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <DialogTitle className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               Purchase Details
             </DialogTitle>
           </motion.div>
         </DialogHeader>
-        <AnimatedButton
-          variant="ghost"
-          className="absolute right-4 top-4 rounded-full opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          onClick={onClose}
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </AnimatedButton>
         <motion.div
           className="mt-4 space-y-4"
           initial={{ opacity: 0 }}
@@ -307,7 +297,7 @@ export default function Page() {
                 <Input
                   type="text"
                   placeholder="Search by user or transaction ID"
-                  className="pl-10 w-full bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
+                  className="pl-10 w-full bg-white/50 dark:bg-gray-700/50 border-0 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />

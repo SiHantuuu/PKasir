@@ -3,7 +3,7 @@ import { useState } from "react"
 import type React from "react"
 
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
-import { CreditCard, Wallet, ArrowRight, X, Check, Search, Calendar } from "lucide-react"
+import { Wallet, ArrowRight, X, Check, Search, Calendar, User } from "lucide-react"
 import { format } from "date-fns"
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -118,9 +118,11 @@ function ErrorDialog({ isOpen, onClose }: ErrorDialogProps) {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <DialogTitle className="text-2xl font-bold text-gray-800 dark:text-gray-100">Card ID Failed</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                Authentication Failed
+              </DialogTitle>
               <DialogDescription className="text-base text-gray-600 dark:text-gray-300">
-                The card ID you entered is not recognized. Please check and try again.
+                The NISN or PIN you entered is incorrect. Please check and try again.
               </DialogDescription>
             </motion.div>
           </motion.div>
@@ -145,11 +147,13 @@ const AnimatedButton = motion(Button)
 export default function Page() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null)
   const [customAmount, setCustomAmount] = useState("")
-  const [nfcId, setNfcId] = useState<string | null>(null)
+  const [nisn, setNisn] = useState<string>("")
+  const [pin, setPin] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedMonth, setSelectedMonth] = useState<string>("all")
   const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [notification, setNotification] = useState<{
     isOpen: boolean
     title: string
@@ -163,11 +167,11 @@ export default function Page() {
   })
 
   // Dummy user data
-  const user = nfcId
+  const user = isAuthenticated
     ? {
         username: "johndoe",
         balance: 150000,
-        nfcId: "burunghantu123",
+        nisn: "1234567890",
       }
     : null
 
@@ -247,18 +251,21 @@ export default function Page() {
     })
   }
 
-  const handleNfcSubmit = async (e: React.FormEvent) => {
+  // Update the handleAuthSubmit function to show notifications for both success and failure cases
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
-    const nfcValue = formData.get("nfc") as string
-
     setIsProcessing(true)
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      if (nfcValue === "burunghantu123") {
-        setNfcId(nfcValue)
-        showNotification("Card Connected", "Your card has been successfully connected.", "success")
+      if (nisn === "1234567890" && pin === "1234") {
+        setIsAuthenticated(true)
+        showNotification("Authentication Successful", "You have been successfully authenticated.", "success")
       } else {
+        showNotification(
+          "Authentication Failed",
+          "The NISN or PIN you entered is incorrect. Please try again.",
+          "error",
+        )
         setShowErrorDialog(true)
       }
     } finally {
@@ -266,6 +273,7 @@ export default function Page() {
     }
   }
 
+  // Update the handleTopUp function to show notifications for both success and failure cases
   const handleTopUp = async () => {
     if (selectedAmount && selectedAmount >= 10000) {
       setIsProcessing(true)
@@ -277,18 +285,26 @@ export default function Page() {
           "success",
         )
         setTimeout(() => {
-          setNfcId(null)
+          setIsAuthenticated(false)
+          setNisn("")
+          setPin("")
           setSelectedAmount(null)
           setCustomAmount("")
         }, 2000)
+      } catch (error) {
+        showNotification("Top Up Failed", "There was an error processing your top up. Please try again.", "error")
       } finally {
         setIsProcessing(false)
       }
+    } else {
+      showNotification("Invalid Amount", "Please enter a valid amount (minimum Rp 10,000).", "error")
     }
   }
 
-  const handleClearNfc = () => {
-    setNfcId(null)
+  const handleClearAuth = () => {
+    setIsAuthenticated(false)
+    setNisn("")
+    setPin("")
     setSelectedAmount(null)
     setCustomAmount("")
   }
@@ -302,7 +318,7 @@ export default function Page() {
     exit: { opacity: 0, y: -20 },
   }
 
-  if (!nfcId) {
+  if (!isAuthenticated) {
     return (
       <SidebarProvider>
         <AppSidebar />
@@ -339,7 +355,7 @@ export default function Page() {
               className="w-full max-w-md p-8"
             >
               <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
-                <form onSubmit={handleNfcSubmit} className="space-y-8 p-8">
+                <form onSubmit={handleAuthSubmit} className="space-y-8 p-8">
                   <motion.div
                     className="space-y-4 text-center"
                     initial={{ scale: 0.9 }}
@@ -357,7 +373,7 @@ export default function Page() {
                         repeatType: "reverse",
                       }}
                     >
-                      <CreditCard className="w-20 h-20 mx-auto text-primary" />
+                      <User className="w-20 h-20 mx-auto text-primary" />
                     </motion.div>
                     <motion.h2
                       className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
@@ -365,7 +381,7 @@ export default function Page() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
                     >
-                      Tap Your Card
+                      Authenticate to Top Up
                     </motion.h2>
                     <motion.p
                       className="text-sm text-gray-500 dark:text-gray-400"
@@ -373,7 +389,7 @@ export default function Page() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4 }}
                     >
-                      Please tap your NFC card or enter your card ID manually
+                      Please enter your NISN and PIN to continue
                     </motion.p>
                   </motion.div>
                   <motion.div
@@ -382,16 +398,39 @@ export default function Page() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <Label htmlFor="nfc" className="text-gray-700 dark:text-gray-300">
-                      Card ID
-                    </Label>
-                    <Input
-                      id="nfc"
-                      name="nfc"
-                      placeholder="Enter your card ID"
-                      className="h-12 text-lg bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
-                      required
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="nisn" className="text-gray-700 dark:text-gray-300">
+                        NISN
+                      </Label>
+                      <Input
+                        id="nisn"
+                        name="nisn"
+                        value={nisn}
+                        onChange={(e) => setNisn(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                        placeholder="Enter your 10-digit NISN"
+                        className="h-12 text-lg bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
+                        required
+                        maxLength={10}
+                      />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234567890"</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pin" className="text-gray-700 dark:text-gray-300">
+                        PIN
+                      </Label>
+                      <Input
+                        id="pin"
+                        name="pin"
+                        type="password"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="Enter your 4-digit PIN"
+                        className="h-12 text-lg bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
+                        required
+                        maxLength={4}
+                      />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234"</p>
+                    </div>
                   </motion.div>
                   <AnimatedButton
                     type="submit"
@@ -405,10 +444,10 @@ export default function Page() {
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                       >
-                        <CreditCard className="w-6 h-6" />
+                        <User className="w-6 h-6" />
                       </motion.div>
                     ) : (
-                      "Continue"
+                      "Authenticate"
                     )}
                   </AnimatedButton>
                 </form>
@@ -454,18 +493,18 @@ export default function Page() {
                 transition={{ type: "spring" }}
               >
                 <Alert className="mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
-                  <CreditCard className="h-7 w-4 text-primary" />
+                  <User className="h-7 w-4 text-primary" />
                   <AlertDescription className="flex items-center text-gray-700 dark:text-gray-300">
-                    Card ID: {nfcId}
+                    NISN: {nisn}
                     <AnimatedButton
                       variant="ghost"
                       size="sm"
                       className="ml-2"
-                      onClick={handleClearNfc}
+                      onClick={handleClearAuth}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <X className="w-4 h-4 mr-1" /> Clear Card
+                      <X className="w-4 h-4 mr-1" /> Clear Authentication
                     </AnimatedButton>
                   </AlertDescription>
                 </Alert>
@@ -641,7 +680,7 @@ export default function Page() {
                           <Input
                             type="text"
                             placeholder="Search transactions"
-                            className="pl-10 w-full sm:w-64 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
+                            className="pl-10 w-full sm:w-64 bg-white/50 dark:bg-gray-700/50 border-0 shadow-inner"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                           />

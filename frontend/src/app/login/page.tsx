@@ -47,9 +47,15 @@ export default function LoginPage() {
       login(username)
       setTimeout(() => {
         router.push("/")
-      }, 1000) // Redirect after 2 seconds
+      }, 1000) // Redirect after 1 second
     } else {
       setError("Invalid username or password")
+      setNotification({
+        isOpen: true,
+        title: "Login Failed",
+        description: "The username or password you entered is incorrect. Please try again.",
+        status: "error",
+      })
     }
   }
 
