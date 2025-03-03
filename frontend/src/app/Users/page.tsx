@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, User, GraduationCap, School, Calendar, CreditCard, Check, X, Upload } from "lucide-react"
+import { Search, User, GraduationCap, School, Calendar, CreditCard, Check, X, Upload, Download } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -199,15 +199,7 @@ function StudentDetailsDialog({
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 300, damping: 10 }}
               >
-                {student.profileImage ? (
-                  <img
-                    src={student.profileImage || "/placeholder.svg"}
-                    alt={student.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="h-8 w-8 text-primary" />
-                )}
+                <User className="h-8 w-8 text-primary" />
               </motion.div>
               <div>
                 <motion.h3
@@ -394,6 +386,7 @@ export default function StudentsPage() {
   })
   const [hoveredStudentId, setHoveredStudentId] = useState<string | null>(null)
   const [showCSVGuide, setShowCSVGuide] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
 
   // Create a mutable copy of the students list
   const [students, setStudents] = useState<Student[]>(studentsList)
@@ -426,6 +419,25 @@ export default function StudentsPage() {
       description: "The student's NFC ID has been successfully configured.",
       status: "success",
     })
+  }
+
+  const handleImportCSV = (file: File) => {
+    setCsvFile(file)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const csv = event.target?.result as string
+      // Here you would process the CSV and add students
+      console.log("CSV content:", csv)
+      // For now, we'll just show a notification
+      setNotification({
+        isOpen: true,
+        title: "Students Imported",
+        description: "CSV file has been processed. Students will be added to the system.",
+        status: "success",
+      })
+      setShowCSVGuide(false)
+    }
+    reader.readAsText(file)
   }
 
   return (
@@ -480,94 +492,60 @@ export default function StudentsPage() {
                 />
               </motion.div>
               <motion.div
-                className="flex flex-wrap gap-4"
+                className="flex items-center justify-between gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <Select
-                    value={selectedYear || ""}
-                    onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}
-                  >
-                    <SelectTrigger className="w-[180px] bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md">
-                      <SelectValue placeholder="Entry Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Years</SelectItem>
-                      {years.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <Select
+                      value={selectedYear || "all"}
+                      onValueChange={(value) => setSelectedYear(value === "all" ? null : value)}
+                    >
+                      <SelectTrigger className="w-[180px] bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md">
+                        <SelectValue placeholder="Entry Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Years</SelectItem>
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <School className="h-5 w-5 text-primary" />
+                    <Select
+                      value={selectedClass || "all"}
+                      onValueChange={(value) => setSelectedClass(value === "all" ? null : value)}
+                    >
+                      <SelectTrigger className="w-[180px] bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md">
+                        <SelectValue placeholder="Class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classes</SelectItem>
+                        {classes.map((className) => (
+                          <SelectItem key={className} value={className}>
+                            {className}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <School className="h-5 w-5 text-primary" />
-                  <Select
-                    value={selectedClass || ""}
-                    onValueChange={(value) => setSelectedClass(value === "all" ? null : value)}
-                  >
-                    <SelectTrigger className="w-[180px] bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md">
-                      <SelectValue placeholder="Class" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Classes</SelectItem>
-                      {classes.map((className) => (
-                        <SelectItem key={className} value={className}>
-                          {className}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
+                  <Button className="bg-primary text-primary-foreground" onClick={() => setShowCSVGuide(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Students (CSV)
+                  </Button>
+                </motion.div>
               </motion.div>
-            </motion.div>
-
-            <motion.div
-              className="flex justify-end mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Button className="bg-primary text-primary-foreground mr-2" onClick={() => setShowCSVGuide(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                CSV Import Guide
-              </Button>
-              <Button
-                className="bg-primary text-primary-foreground"
-                onClick={() => {
-                  const input = document.createElement("input")
-                  input.type = "file"
-                  input.accept = ".csv"
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (event) => {
-                        const csv = event.target?.result as string
-                        // Here you would process the CSV and add students
-                        console.log("CSV content:", csv)
-                        // For now, we'll just show a notification
-                        setNotification({
-                          isOpen: true,
-                          title: "Students Imported",
-                          description: "CSV file has been processed. Students will be added to the system.",
-                          status: "success",
-                        })
-                      }
-                      reader.readAsText(file)
-                    }
-                  }
-                  input.click()
-                }}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Import Students (CSV)
-              </Button>
             </motion.div>
 
             {/* Students List */}
@@ -601,15 +579,7 @@ export default function StudentsPage() {
                             whileHover={{ rotate: 360 }}
                             transition={{ duration: 0.5 }}
                           >
-                            {student.profileImage ? (
-                              <img
-                                src={student.profileImage || "/placeholder.svg"}
-                                alt={student.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <User className="w-6 h-6 text-primary" />
-                            )}
+                            <User className="w-6 h-6 text-primary" />
                           </motion.div>
                           <div>
                             <motion.p className="font-medium text-gray-800 dark:text-gray-200" whileHover={{ x: 5 }}>
@@ -700,6 +670,8 @@ export default function StudentsPage() {
         description={notification.description}
         status={notification.status}
       />
+
+      {/* CSV Import Dialog */}
       <Dialog open={showCSVGuide} onOpenChange={setShowCSVGuide}>
         <DialogContent className="sm:max-w-[700px] p-0">
           <motion.div
@@ -709,6 +681,49 @@ export default function StudentsPage() {
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
             <CSVImportGuide />
+            <div className="p-6 flex justify-end gap-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const sampleCSV = `id,name,entryYear,class,nfcId,pin
+STD011,John Doe,2022,X IPA 1,nfc123,1234
+STD012,Jane Smith,2022,X IPA 2,,
+STD013,Robert Johnson,2021,XI IPA 1,nfc456,5678
+STD014,Emily Davis,2021,XI IPS 1,,
+STD015,Michael Brown,2020,XII IPA 1,nfc789,9012`
+
+                  const blob = new Blob([sampleCSV], { type: "text/csv" })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = "students_sample.csv"
+                  document.body.appendChild(a)
+                  a.click()
+                  document.body.removeChild(a)
+                  URL.revokeObjectURL(url)
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Sample CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  const input = document.createElement("input")
+                  input.type = "file"
+                  input.accept = ".csv"
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (file) {
+                      handleImportCSV(file)
+                    }
+                  }
+                  input.click()
+                }}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import CSV
+              </Button>
+            </div>
           </motion.div>
         </DialogContent>
       </Dialog>

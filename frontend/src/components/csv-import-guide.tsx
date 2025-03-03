@@ -45,16 +45,6 @@ STD015,Michael Brown,2020,XII IPA 1,nfc789,9012`
         <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md overflow-x-auto">
           <pre className="text-sm">{sampleCSV}</pre>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCopy}>
-            {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-            {copied ? "Copied!" : "Copy to Clipboard"}
-          </Button>
-          <Button onClick={handleDownload}>
-            <Download className="mr-2 h-4 w-4" />
-            Download Sample CSV
-          </Button>
-        </div>
         <div className="mt-4 space-y-2">
           <h3 className="font-medium">Required Fields:</h3>
           <ul className="list-disc pl-5 space-y-1 text-sm">

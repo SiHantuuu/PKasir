@@ -21,10 +21,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import ProductAnalytics from "@/components/product-analytics"
 
+// Add these imports at the top with the other imports
+import { useScroll, useSpring } from "framer-motion"
+
 const ITEMS_PER_PAGE = 8 // Changed back to 8 products per page
 
 // Sample categories
 const categories = ["All", "Electronics", "Clothing", "Home"]
+
+// Add this component definition before the NewItemDialog component
+const ProgressBar = () => {
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  })
+
+  return <motion.div className="fixed top-0 left-0 right-0 h-1 bg-primary z-50 origin-left" style={{ scaleX }} />
+}
 
 function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [name, setName] = useState("")
@@ -299,7 +314,15 @@ export default function Page() {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(
           <motion.div key={`page-${i}`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button variant={currentPage === i ? "default" : "outline"} onClick={() => handlePageChange(i)}>
+            <Button
+              variant={currentPage === i ? "default" : "outline"}
+              onClick={() => handlePageChange(i)}
+              className={`${
+                currentPage === i
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-primary/10"
+              }`}
+            >
               {i}
             </Button>
           </motion.div>,
@@ -353,11 +376,13 @@ export default function Page() {
     return pageNumbers
   }
 
+  // Then add the ProgressBar component inside the SidebarInset, just after it opens:
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col h-screen">
+        <ProgressBar />
+        <div className="flex flex-col h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
           {/* Header */}
           <motion.header
             initial={{ y: -100 }}
@@ -374,7 +399,7 @@ export default function Page() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                Products
+                {activeTab === "analytics" ? "Product Analytics" : "Products"}
               </motion.h1>
             </div>
             <div className="flex-1 flex justify-end items-center space-x-4 px-6">
@@ -482,22 +507,36 @@ export default function Page() {
           </motion.header>
 
           {/* Main content with tabs */}
-          <Tabs defaultValue="products" className="flex-1 overflow-hidden">
-            <TabsList className="mx-6 mt-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-0 shadow-md">
-              <TabsTrigger
-                value="products"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Products
-              </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <BarChart className="w-4 h-4 mr-2" />
-                Analytics
-              </TabsTrigger>
+          <Tabs defaultValue="products" className="flex-1 overflow-hidden flex flex-col">
+            <TabsList className="mx-6 mt-4 bg-transparent">
+              <AnimatePresence mode="wait">
+                {["products", "analytics"].map((tab) => (
+                  <motion.div
+                    key={tab}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TabsTrigger
+                      value={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`${
+                        activeTab === tab
+                          ? "bg-white/80 dark:bg-gray-800/80 text-primary"
+                          : "bg-transparent text-foreground"
+                      } transition-all duration-300 ease-in-out`}
+                    >
+                      {tab === "products" ? (
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                      ) : (
+                        <BarChart className="w-4 h-4 mr-2" />
+                      )}
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </TabsTrigger>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </TabsList>
 
             <TabsContent value="products" className="flex-1 overflow-auto p-4 mt-2">
@@ -508,7 +547,6 @@ export default function Page() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: pageDirection * -50 }}
                   transition={{ duration: 0.3 }}
-                  whileHover={{ scale: 1 }}
                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
                 >
                   {paginatedProducts.map((product, index) => (
@@ -518,18 +556,32 @@ export default function Page() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
-                      whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleProductClick(product)}
+                      className="shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <ProductCard product={product} />
                     </motion.div>
                   ))}
                 </motion.div>
               </AnimatePresence>
+            </TabsContent>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="bg-white dark:bg-gray-800 p-2 flex justify-center items-center space-x-2 mt-4">
+            <TabsContent value="analytics" className="flex-1 overflow-auto p-4 mt-2">
+              <ProductAnalytics products={products} />
+            </TabsContent>
+
+            {/* Footer with pagination */}
+            <AnimatePresence>
+              {activeTab === "products" && totalPages > 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 50 }}
+                  transition={{ duration: 0.5 }}
+                  className="p-4 flex justify-center items-center space-x-2 mt-auto"
+                >
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button
                       variant="outline"
@@ -551,13 +603,9 @@ export default function Page() {
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </motion.div>
-                </div>
+                </motion.div>
               )}
-            </TabsContent>
-
-            <TabsContent value="analytics" className="flex-1 overflow-auto p-4 mt-2">
-              <ProductAnalytics products={products} />
-            </TabsContent>
+            </AnimatePresence>
           </Tabs>
         </div>
       </SidebarInset>
