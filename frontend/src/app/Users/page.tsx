@@ -225,7 +225,7 @@ function StudentDetailsDialog({
               className="space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ duration: 0.3 }} // Changed from delay: 0.6 to duration: 0.3
             >
               <div className="space-y-2">
                 <Label htmlFor="current-nfc-id" className="text-gray-700 dark:text-gray-300">

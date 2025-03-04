@@ -150,7 +150,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     localStorage.setItem("theme", newTheme ? "dark" : "light")
   }
 
-  // Modify the logout function to redirect to dashboard
+  // Modify the logout function to extend the sign out message duration
   const handleLogout = () => {
     logout()
     setNotification({
@@ -161,7 +161,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     })
     setTimeout(() => {
       window.location.href = "/"
-    }, 2000) // Redirect after 2 seconds
+    }, 3000) // Extended from 2000 to 3000 ms (3 seconds)
   }
 
   // Check for system preference on mount

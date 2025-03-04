@@ -326,6 +326,7 @@ export default function DashboardPage() {
 
   const totalPrice = scannedProducts.reduce((sum, product) => sum + product.price * product.quantity, 0)
 
+  // Update the notification in handlePay to auto-close
   const handlePay = () => {
     if (scannedCard) {
       if (scannedCard.balance < totalPrice) {
@@ -350,7 +351,7 @@ export default function DashboardPage() {
       setTimeout(() => {
         setScannedCard(null)
         setTempCard(null)
-      }, 2000) // 2 second delay to allow user to see the success message
+      }, 3000) // Extended from 2 seconds to 3 seconds
     }
   }
 

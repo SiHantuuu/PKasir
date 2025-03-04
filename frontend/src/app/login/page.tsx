@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogIn, User, Lock, AlertCircle } from "lucide-react"
+import { LogIn, User, Lock, AlertCircle } from 'lucide-react'
 import { NotificationDialog } from "@/components/notification-dialog"
 
 export default function LoginPage() {
@@ -47,7 +47,7 @@ export default function LoginPage() {
       login(username)
       setTimeout(() => {
         router.push("/")
-      }, 1000) // Redirect after 1 second
+      }, 2000) // Redirect after 2 seconds
     } else {
       setError("Invalid username or password")
       setNotification({
@@ -78,7 +78,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-4">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-4"
+    >
       <motion.div variants={containerVariants} initial="hidden" animate="visible">
         <Card className="w-full max-w-md backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
           <CardHeader className="space-y-1">
@@ -160,7 +165,7 @@ export default function LoginPage() {
           status={notification.status}
         />
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 

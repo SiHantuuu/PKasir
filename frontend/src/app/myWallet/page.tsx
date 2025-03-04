@@ -127,65 +127,103 @@ const AuthForm = ({ onAuthenticate }: { onAuthenticate: (nisn: string, pin: stri
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.5 }}
       className="flex items-center justify-center min-h-[calc(100vh-4rem)]"
     >
-      <Card className="w-full max-w-md overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Access Your Wallet
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nisn">NISN (National Student ID Number)</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="nisn"
-                  type="text"
-                  value={nisn}
-                  onChange={(e) => setNisn(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  className="pl-10"
-                  placeholder="Enter your 10-digit NISN"
-                  maxLength={10}
-                />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234567890"</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pin">PIN</Label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input
-                  id="pin"
-                  type="password"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  className="pl-10"
-                  placeholder="Enter your 4-digit PIN"
-                  maxLength={4}
-                />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234"</p>
-            </div>
-            {error && (
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 50 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{
+          type: "spring",
+          stiffness: 260,
+          damping: 20,
+          delay: 0.2,
+        }}
+      >
+        <Card className="w-full max-w-md overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
+          <CardHeader>
+            <motion.div
+              initial={{ y: -40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 20,
+                delay: 0.4,
+              }}
+            >
+              <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Access Your Wallet
+              </CardTitle>
+            </motion.div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md flex items-center space-x-2"
+                className="space-y-2"
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6, type: "spring" }}
               >
-                <X size={18} />
-                <span>{error}</span>
+                <Label htmlFor="nisn">NISN (National Student ID Number)</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Input
+                    id="nisn"
+                    type="text"
+                    value={nisn}
+                    onChange={(e) => setNisn(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="pl-10"
+                    placeholder="Enter your 10-digit NISN"
+                    maxLength={10}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234567890"</p>
               </motion.div>
-            )}
-            <Button type="submit" className="w-full">
-              Access Wallet
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <motion.div
+                className="space-y-2"
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.8, type: "spring" }}
+              >
+                <Label htmlFor="pin">PIN</Label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                  <Input
+                    id="pin"
+                    type="password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    className="pl-10"
+                    placeholder="Enter your 4-digit PIN"
+                    maxLength={4}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Hint: Use "1234"</p>
+              </motion.div>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md flex items-center space-x-2"
+                >
+                  <X size={18} />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+              <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 1, type: "spring" }}
+              >
+                <Button type="submit" className="w-full">
+                  Access Wallet
+                </Button>
+              </motion.div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
     </motion.div>
   )
 }
@@ -213,9 +251,9 @@ export default function MyWalletPage() {
   })
   const [isCurrentPinCorrect, setIsCurrentPinCorrect] = useState<boolean | null>(null)
 
-  const [showCurrentPin, setShowCurrentPin] = useState(false)
-  const [showNewPin, setShowNewPin] = useState(false)
-  const [showConfirmPin, setShowConfirmPin] = useState(false)
+  const [showCurrentPin, setShowNewPin] = useState(false)
+  const [showNewPin, setShowConfirmPin] = useState(false)
+  const [showConfirmPin, setShowCurrentPin] = useState(false)
 
   // Mock user data
   const user = {
@@ -269,7 +307,7 @@ export default function MyWalletPage() {
     }).format(amount)
   }
 
-  // Update the handlePinChange function to show notifications for both success and failure cases
+  // Modify the handlePinChange function to show notifications for both success and failure cases
   const handlePinChange = () => {
     setPinError(null)
     setIsProcessing(true)
@@ -376,8 +414,8 @@ export default function MyWalletPage() {
             <Separator orientation="vertical" className="mx-4 h-4" />
             <motion.h1
               className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
               My Wallet
@@ -385,7 +423,12 @@ export default function MyWalletPage() {
           </div>
         </motion.header>
 
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+        >
           <div className="container max-w-6xl p-6 mx-auto min-h-[calc(100vh-4rem)]">
             <AnimatePresence mode="wait">
               {!isAuthenticated ? (
@@ -394,22 +437,28 @@ export default function MyWalletPage() {
                 // Existing wallet content goes here
                 <motion.div
                   key="wallet-content"
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
+                  exit={{ opacity: 0, y: -50 }}
+                  transition={{ duration: 0.5 }}
                 >
                   {/* User Balance Card */}
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
                     className="mb-6"
+                    whileHover={{ y: -5 }}
                   >
                     <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div className="space-y-2">
+                          <motion.div
+                            className="space-y-2"
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.4, type: "spring" }}
+                          >
                             <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                               Welcome, {user.name}
                             </h2>
@@ -417,12 +466,12 @@ export default function MyWalletPage() {
                               <CreditCard className="w-4 h-4" />
                               <span>Card ID: {user.cardId}</span>
                             </div>
-                          </div>
+                          </motion.div>
                           <motion.div
                             className="flex items-center gap-3"
-                            initial={{ x: -20, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            transition={{ delay: 0.3 }}
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.5, delay: 0.6 }}
                           >
                             <motion.div
                               animate={{
@@ -438,9 +487,14 @@ export default function MyWalletPage() {
                             </motion.div>
                             <div>
                               <p className="text-sm text-gray-500 dark:text-gray-400">Current Balance</p>
-                              <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                              <motion.span
+                                className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
+                                initial={{ scale: 0.8, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
+                              >
                                 {formatCurrency(user.balance)}
-                              </span>
+                              </motion.span>
                             </div>
                           </motion.div>
                         </div>
@@ -450,9 +504,9 @@ export default function MyWalletPage() {
 
                   {/* Tabs for PIN Management and Transaction History */}
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
                   >
                     <Tabs defaultValue="pin" className="w-full">
                       <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -479,7 +533,7 @@ export default function MyWalletPage() {
                               className="space-y-4"
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.4 }}
+                              transition={{ duration: 0.3 }}
                             >
                               <div className="space-y-2">
                                 <Label htmlFor="current-pin" className="text-gray-700 dark:text-gray-300">
@@ -508,9 +562,9 @@ export default function MyWalletPage() {
                                     type="button"
                                     variant="ghost"
                                     className="absolute right-0 top-0 h-full px-3"
-                                    onMouseDown={() => setShowCurrentPin(true)}
-                                    onMouseUp={() => setShowCurrentPin(false)}
-                                    onMouseLeave={() => setShowCurrentPin(false)}
+                                    onMouseDown={() => setShowConfirmPin(true)}
+                                    onMouseUp={() => setShowConfirmPin(false)}
+                                    onMouseLeave={() => setShowConfirmPin(false)}
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
@@ -590,9 +644,9 @@ export default function MyWalletPage() {
                                     type="button"
                                     variant="ghost"
                                     className="absolute right-0 top-0 h-full px-3"
-                                    onMouseDown={() => setShowConfirmPin(true)}
-                                    onMouseUp={() => setShowConfirmPin(false)}
-                                    onMouseLeave={() => setShowConfirmPin(false)}
+                                    onMouseDown={() => setShowCurrentPin(true)}
+                                    onMouseUp={() => setShowCurrentPin(false)}
+                                    onMouseLeave={() => setShowCurrentPin(false)}
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
@@ -614,7 +668,7 @@ export default function MyWalletPage() {
                                 className="pt-4"
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5 }}
+                                transition={{ duration: 0.2 }}
                               >
                                 <AnimatedButton
                                   onClick={handlePinChange}
@@ -695,19 +749,19 @@ export default function MyWalletPage() {
                             <motion.div layout className="space-y-4">
                               <AnimatePresence mode="popLayout">
                                 {filteredTransactions.length > 0 ? (
-                                  filteredTransactions.map((transaction) => (
+                                  filteredTransactions.map((transaction, index) => (
                                     <motion.div
                                       key={transaction.id}
                                       layout
-                                      variants={itemVariants}
-                                      initial="hidden"
-                                      animate="visible"
-                                      exit="exit"
+                                      initial={{ opacity: 0, y: 50 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -50 }}
                                       transition={{
                                         type: "spring",
                                         stiffness: 500,
                                         damping: 50,
                                         mass: 1,
+                                        delay: index * 0.1,
                                       }}
                                     >
                                       <motion.div
@@ -757,9 +811,9 @@ export default function MyWalletPage() {
                                   ))
                                 ) : (
                                   <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
                                     className="text-center py-8 text-gray-500 dark:text-gray-400"
                                   >
                                     No transactions found
@@ -776,7 +830,7 @@ export default function MyWalletPage() {
               )}
             </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
 
         <NotificationDialog
           isOpen={notification.isOpen}

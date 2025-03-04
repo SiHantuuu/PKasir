@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Check, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { useEffect } from "react"
 
 interface NotificationDialogProps {
   isOpen: boolean
@@ -11,9 +12,30 @@ interface NotificationDialogProps {
   title: string
   description: string
   status: "success" | "error"
+  autoClose?: boolean
+  autoCloseTime?: number
 }
 
-export function NotificationDialog({ isOpen, onClose, title, description, status }: NotificationDialogProps) {
+export function NotificationDialog({
+  isOpen,
+  onClose,
+  title,
+  description,
+  status,
+  autoClose = false, // Changed to false by default
+  autoCloseTime = 3000,
+}: NotificationDialogProps) {
+  // Auto close the notification after specified time if autoClose is true
+  useEffect(() => {
+    if (isOpen && autoClose) {
+      const timer = setTimeout(() => {
+        onClose()
+      }, autoCloseTime)
+
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, onClose, autoClose, autoCloseTime])
+
   return (
     <AnimatePresence>
       {isOpen && (

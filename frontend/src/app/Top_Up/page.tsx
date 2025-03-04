@@ -290,7 +290,7 @@ export default function Page() {
           setPin("")
           setSelectedAmount(null)
           setCustomAmount("")
-        }, 2000)
+        }, 3000) // Extended to 3 seconds for better visibility
       } catch (error) {
         showNotification("Top Up Failed", "There was an error processing your top up. Please try again.", "error")
       } finally {
