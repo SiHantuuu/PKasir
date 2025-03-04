@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { X, DollarSign, Calendar, User, Search, ArrowRight } from "lucide-react"
+import { DollarSign, Calendar, User, Search, ArrowRight, FileSpreadsheet } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { format } from "date-fns"
@@ -81,7 +81,6 @@ const paymentHistory: Payment[] = [
       { name: "Silent Flight Training Manual", price: 75000, quantity: 1 },
     ],
   },
-  
 ]
 
 const ProgressBar = () => {
@@ -111,21 +110,11 @@ function PurchaseDetailsDialog({
       <DialogContent className="sm:max-w-[425px] bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-0 shadow-lg">
         <DialogHeader>
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <DialogTitle className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               Purchase Details
             </DialogTitle>
           </motion.div>
         </DialogHeader>
-        <AnimatedButton
-          variant="ghost"
-          className="absolute right-4 top-4 rounded-full opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          onClick={onClose}
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </AnimatedButton>
         <motion.div
           className="mt-4 space-y-4"
           initial={{ opacity: 0 }}
@@ -224,6 +213,44 @@ export default function Page() {
     })
   }, [selectedMonth, searchQuery])
 
+  const exportToExcel = () => {
+    import("xlsx").then((XLSX) => {
+      const worksheet = XLSX.utils.json_to_sheet(
+        filteredPayments.map((payment) => ({
+          ID: payment.id,
+          User: payment.userName,
+          Date: format(new Date(payment.dateTime), "dd MMM yyyy, HH:mm"),
+          Amount: `Rp ${payment.totalPrice.toLocaleString()}`,
+          Items: payment.items.map((item) => `${item.name} (x${item.quantity})`).join(", "),
+        })),
+      )
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Payments")
+
+      // Convert the workbook to a binary string
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+
+      // Create a Blob from the buffer
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+
+      // Create a download link and trigger the download
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "payment_history.xlsx"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    })
+  }
+
+  const handlePresetAmount = (amount: number | null) => {
+    setSelectedMonth(amount === selectedMonth ? null : amount)
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -260,46 +287,71 @@ export default function Page() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="mb-6 space-y-4"
             >
-              <div className="flex flex-col sm:flex-row gap-4">
-                <motion.div
-                  className="relative flex-1"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search by user or transaction ID"
-                    className="pl-10 w-full bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </motion.div>
-              </div>
               <motion.div
-                className="flex flex-wrap gap-2"
+                className="relative"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary dark:text-primary" />
+                <Input
+                  type="text"
+                  placeholder="Search by user or transaction ID"
+                  className="pl-10 w-full bg-white/50 dark:bg-gray-700/50 border-0 shadow-inner"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </motion.div>
+              <motion.div
+                className="flex justify-between items-center"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                {months.map((month, index) => (
+                <div className="flex flex-wrap gap-2">
                   <AnimatedButton
-                    key={month}
-                    variant={selectedMonth === index ? "default" : "outline"}
-                    onClick={() => setSelectedMonth(selectedMonth === index ? null : index)}
+                    variant="outline"
+                    onClick={() => handlePresetAmount(null)}
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm transition-all",
-                      selectedMonth === index
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md",
+                      "px-4 py-2 rounded-full text-sm font-medium transition-all border-2",
+                      selectedMonth === null
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-primary/30 bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm shadow-md",
                     )}
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    {month}
+                    All
                   </AnimatedButton>
-                ))}
+                  {months.map((month, index) => (
+                    <AnimatedButton
+                      key={month}
+                      variant={selectedMonth === index ? "default" : "outline"}
+                      onClick={() => handlePresetAmount(index)}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-sm transition-all",
+                        selectedMonth === index
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md",
+                      )}
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {month}
+                    </AnimatedButton>
+                  ))}
+                </div>
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
+                  <AnimatedButton
+                    onClick={exportToExcel}
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FileSpreadsheet className="w-5 h-5 mr-2" />
+                    Export to Excel
+                  </AnimatedButton>
+                </motion.div>
               </motion.div>
             </motion.div>
 
@@ -361,7 +413,7 @@ export default function Page() {
                 {filteredPayments.length === 0 && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
                     <p className="text-gray-500 dark:text-gray-400">No payments found</p>
-                  </motion.div> 
+                  </motion.div>
                 )}
               </motion.div>
             </LayoutGroup>
