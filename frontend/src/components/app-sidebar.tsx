@@ -3,7 +3,18 @@
 import * as React from "react"
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ShoppingCart, History, CreditCard } from "lucide-react"
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  History,
+  CreditCard,
+  LogIn,
+  LogOut,
+  GraduationCap,
+  Sun,
+  Moon,
+  Wallet,
+} from "lucide-react"
 
 import {
   Sidebar,
@@ -17,6 +28,9 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/lib/auth-context"
+import { NotificationDialog } from "@/components/notification-dialog"
+import { useState } from "react"
 
 type MenuItem = {
   title: string
@@ -29,6 +43,13 @@ const navMain: MenuItem[] = [
   { title: "Product", url: "/Product", icon: ShoppingCart },
   { title: "History", url: "/History", icon: History },
   { title: "Top Up", url: "/Top_Up", icon: CreditCard },
+  { title: "Users", url: "/Users", icon: GraduationCap },
+]
+
+// Add myWallet to navigation for non-logged in users
+const navNonAuth: MenuItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "My Wallet", url: "/myWallet", icon: Wallet },
 ]
 
 // Enhanced menu item animations
@@ -106,6 +127,50 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isHovered, setIsHovered] = React.useState<string | null>(null)
   const { state } = useSidebar()
   const isExpanded = state === "expanded"
+  const [isDarkMode, setIsDarkMode] = React.useState(false)
+  const { isAuthenticated, login, logout, username } = useAuth()
+
+  const [notification, setNotification] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    status: "success" | "error"
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    status: "success",
+  })
+
+  // Theme toggle function
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode
+    setIsDarkMode(newTheme)
+    document.documentElement.classList.toggle("dark", newTheme)
+    localStorage.setItem("theme", newTheme ? "dark" : "light")
+  }
+
+  // Modify the logout function to extend the sign out message duration
+  const handleLogout = () => {
+    logout()
+    setNotification({
+      isOpen: true,
+      title: "Sign Out Successful",
+      description: "You have been successfully signed out.",
+      status: "success",
+    })
+    setTimeout(() => {
+      window.location.href = "/"
+    }, 3000) // Extended from 2000 to 3000 ms (3 seconds)
+  }
+
+  // Check for system preference on mount
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem("theme")
+    const isDark = savedTheme === "dark"
+    setIsDarkMode(isDark)
+    document.documentElement.classList.toggle("dark", isDark)
+  }, [])
 
   // Mouse follow effect
   const mouseX = useMotionValue(0)
@@ -124,16 +189,20 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   // Gradient follow effect
   const background = useMotionTemplate`
     radial-gradient(
-      250px circle at ${mouseX}px ${mouseY}px,
+      350px circle at ${mouseX}px ${mouseY}px,
       var(--blue-glow) 0%,
       transparent 80%
     )
   `
 
+  // Filter menu items based on authentication status
+  const visibleMenuItems = isAuthenticated ? navMain : navNonAuth
+
   return (
     <Sidebar
       {...props}
       className="bg-white dark:bg-gray-900 transition-all duration-500 ease-in-out border-r dark:border-gray-800"
+      style={{ "--blue-glow": "rgba(59, 130, 246, 0.15)" } as React.CSSProperties}
     >
       <motion.div
         className="absolute inset-0 z-0 opacity-30 dark:opacity-20 pointer-events-none"
@@ -144,17 +213,19 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader className="p-4 relative z-10">
         <motion.div className="flex items-center gap-2" initial="initial" animate="animate" variants={logoVariants}>
           <motion.div
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500 text-white"
+            className="flex items-center justify-center w-8 h-8"
+            onClick={() => window.open("https://smamuhpksolo.sch.id/", "_blank")}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <span className="font-bold text-lg">P</span>
+            <img src="https://www.pkbestsmamuhpk.sch.id/logo.png"></img>
           </motion.div>
           <div className="leading-none">
             <motion.span
-              className="font-semibold block text-lg"
+              // className="font-semibold block text-lg"
+              className="font-semibold block text-lg bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
               onClick={() => window.open("https://github.com/SiHantuuu/PKasir", "_blank")}
-              whileHover={{ color: "rgb(59, 130, 246)" }}
+              whileHover={{ color: "rgb(59, 130, 246)", scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >
               <b>PKasir</b>
@@ -163,6 +234,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               className="text-sm text-gray-500 dark:text-gray-400"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, transition: { delay: 0.3, duration: 0.3 } }}
+              whileHover={{ scale: 1.1, color: "rgb(59, 130, 246)" }}
+              transition={{ duration: 0.2 }}
             >
               v100
             </motion.span>
@@ -174,7 +247,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <motion.div variants={containerVariants} initial="hidden" animate="show">
             <SidebarMenu>
-              {navMain.map(({ title, url, icon: Icon }, i) => (
+              {visibleMenuItems.map(({ title, url, icon: Icon }, i) => (
                 <motion.div
                   key={title}
                   custom={i}
@@ -228,14 +301,64 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter className="p-4 relative z-10">
+        {isAuthenticated && (
+          <div className="mb-3 text-center">
+            <motion.p
+              className="text-sm text-gray-500 dark:text-gray-400"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+            >
+              Logged in as: <span className="font-medium text-blue-500">{username}</span>
+            </motion.p>
+          </div>
+        )}
         <motion.div
-          className="h-px w-full bg-gray-200 dark:bg-gray-800"
+          className="h-px w-full bg-gray-200 dark:bg-gray-800 mb-4"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         />
+        <div className="flex justify-between items-center">
+          <motion.button
+            onClick={toggleTheme}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-300"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-blue-500" />}
+          </motion.button>
+          {!isAuthenticated ? (
+            <motion.button
+              onClick={() => (window.location.href = "/login")}
+              className="flex-1 ml-4 py-2 px-4 rounded-lg flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-600 dark:text-blue-400 transition-colors duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <LogIn size={18} className="mr-2" />
+              <span>Login</span>
+            </motion.button>
+          ) : (
+            <motion.button
+              onClick={handleLogout}
+              className="flex-1 ml-4 py-2 px-4 rounded-lg flex items-center justify-center bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 transition-colors duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <LogOut size={18} className="mr-2" />
+              <span>Sign Out</span>
+            </motion.button>
+          )}
+        </div>
       </SidebarFooter>
-
+      <NotificationDialog
+        isOpen={notification.isOpen}
+        onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+        title={notification.title}
+        description={notification.description}
+        status={notification.status}
+      />
       <SidebarRail />
     </Sidebar>
   )
