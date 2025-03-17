@@ -21,6 +21,12 @@ const authRoutes = [
         path: "/user/nfc/{NFCId}",
         handler: authController.getUserByNFC,
     },
+
+    {
+        method: "GET",
+        path: "/user",
+        handler: authController.getUserData,
+    },
     
 ];
 
