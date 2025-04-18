@@ -118,6 +118,28 @@ const getUserByNFC = async (request, h) => {
         return h.response({ message: "Internal server error" }).code(500);
     }
 };
+const getUserData = async (request, h) => {
+    const userId = request.params.id;
+  
+    try {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.execute(
+        "SELECT Id, NFCId AS Nim, Amount AS Balance FROM User WHERE Id = ?",
+        [userId]
+      );
+      connection.release();
+  
+      if (rows.length === 0) {
+        return h.response({ message: "User not found" }).code(404);
+      }
+  
+      return h.response(rows[0]).code(200);
+    } catch (error) {
+      console.error(error);
+      return h.response({ error: "Database error" }).code(500);
+    }
+  };
+  
 
 
-module.exports = { register, loginAdmin, loginSiswa, getUserByNFC };   
+module.exports = { register, loginAdmin, loginSiswa, getUserByNFC,getUserData };   
