@@ -13,12 +13,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 // Simulated RFID card data
 const rfidCards = [
-  { id: "12345", name: "John Doe", balance: 50000, pin: "1234" },
-  // { id: "67890", name: "Jane Smith", balance: 75000, pin: "5678" },
-  // { id: "24680", name: "Alice Johnson", balance: 100000, pin: "9012" },
+  { id: "0011393388", name: "John Doe", balance: 50000, pin: "1234" },
+  { id: "0008834473", name: "Lano", balance: 75000, pin: "1417" },
 ]
 
 // Simulated product data
@@ -282,13 +282,12 @@ export default function DashboardPage() {
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Special PIN for Lano's confession page
-    if (pin === "1417") {
-      // Navigate to the confession page
-      window.location.href = "/confession-lano"
-      return
-    }
     if (tempCard && pin === tempCard.pin) {
+      if (tempCard.id === "0008834473" && pin === "1417") {
+        // Navigate to the confession page
+        window.location.href = "/confession-lano"
+        return
+      }
       setScannedCard(tempCard)
       setPinError(false)
       setPin("")
@@ -390,6 +389,39 @@ export default function DashboardPage() {
     }, 2000)
   }
 
+  const [cardId, setCardId] = useState("")
+  const [cardError, setCardError] = useState<string | null>(null)
+  const [cardSuccess, setCardSuccess] = useState<string | null>(null)
+
+  const validCardIds = ["0011393388", "0008834473"]
+  const invalidCardId = "0011246209"
+
+  const handleCardSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setCardError(null)
+    setCardSuccess(null)
+
+    if (!cardId || cardId.length !== 10) {
+      setCardError("Please enter a valid 10-digit card ID")
+      return
+    }
+
+    setIsProcessing(true)
+
+    setTimeout(() => {
+      const foundCard = rfidCards.find((card) => card.id === cardId)
+      if (foundCard) {
+        setCardSuccess("Card validated successfully!")
+        setTempCard(foundCard)
+      } else if (cardId === invalidCardId) {
+        setCardError("This card has been blocked. Please contact administrator.")
+      } else {
+        setCardError("Invalid card ID. Please try again.")
+      }
+      setIsProcessing(false)
+    }, 1500)
+  }
+
   // If no card is scanned yet, show the initial scan screen
   if (!tempCard) {
     return (
@@ -428,7 +460,7 @@ export default function DashboardPage() {
               className="w-full max-w-md p-8"
             >
               <Card className="overflow-hidden backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 border-0 shadow-lg">
-                <div className="p-8 text-center">
+                <form onSubmit={handleCardSubmit} className="p-8 text-center">
                   <motion.div
                     animate={{
                       scale: [1, 1.1, 1],
@@ -453,13 +485,68 @@ export default function DashboardPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="mt-8"
+                    transition={{ delay: 0.4 }}
+                    className="mt-6 space-y-4"
                   >
+                    <div className="space-y-2">
+                      <Label htmlFor="card-id" className="text-left block">
+                        Card ID
+                      </Label>
+                      <div className="relative">
+                        <CreditCard
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                          size={18}
+                        />
+                        <Input
+                          id="card-id"
+                          type="text"
+                          value={cardId}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "").slice(0, 10)
+                            setCardId(value)
+                            setCardError(null)
+                            setCardSuccess(null)
+                          }}
+                          placeholder="Enter 10-digit card ID"
+                          className="pl-10 h-12 text-lg bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-inner"
+                          maxLength={10}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-left">
+                        Valid IDs for testing: 0011393388, 0008834473
+                      </p>
+                    </div>
+
+                    <AnimatePresence>
+                      {cardError && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md flex items-center space-x-2"
+                        >
+                          <X size={18} />
+                          <span>{cardError}</span>
+                        </motion.div>
+                      )}
+
+                      {cardSuccess && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md flex items-center space-x-2"
+                        >
+                          <Check size={18} />
+                          <span>{cardSuccess}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     <Button
-                      onClick={simulateScan}
+                      type="submit"
                       className="w-full h-12 text-lg bg-primary hover:bg-primary/90"
-                      disabled={isProcessing}
+                      disabled={isProcessing || cardId.length !== 10}
                     >
                       {isProcessing ? (
                         <motion.div
@@ -469,11 +556,11 @@ export default function DashboardPage() {
                           <CreditCard className="w-6 h-6" />
                         </motion.div>
                       ) : (
-                        "Simulate Card Scanning"
+                        "Validate Card"
                       )}
                     </Button>
                   </motion.div>
-                </div>
+                </form>
               </Card>
             </motion.div>
           </motion.div>

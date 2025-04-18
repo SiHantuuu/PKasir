@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 export default function ConfessionPage() {
   const [showContent, setShowContent] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const router = useRouter()
 
   const confessionTexts = [
@@ -31,6 +32,35 @@ export default function ConfessionPage() {
     }, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  // New effect to handle automatic redirection after viewing all slides
+  useEffect(() => {
+    // Start countdown after all slides have been shown (after 5 slides × 5 seconds)
+    if (showContent) {
+      const redirectTimer = setTimeout(
+        () => {
+          // Start a 10-second countdown before redirecting
+          setCountdown(10)
+        },
+        confessionTexts.length * 5000 + 2000,
+      ) // Add 2 seconds buffer
+
+      return () => clearTimeout(redirectTimer)
+    }
+  }, [showContent])
+
+  // Countdown effect
+  useEffect(() => {
+    if (countdown === null) return
+
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    } else {
+      // Redirect to dashboard when countdown reaches 0
+      router.push("/")
+    }
+  }, [countdown, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-100 to-purple-200 flex flex-col items-center justify-center p-4">
@@ -128,6 +158,17 @@ export default function ConfessionPage() {
               <p className="text-sm text-gray-600">With all my love,</p>
               <p className="text-xl font-bold text-pink-600">Lano</p>
             </motion.div>
+
+            {/* Countdown display */}
+            {countdown !== null && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-8 p-4 bg-white/50 backdrop-blur-sm rounded-lg inline-block"
+              >
+                <p className="text-gray-600">Redirecting to dashboard in {countdown} seconds...</p>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
