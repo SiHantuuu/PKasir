@@ -81,7 +81,7 @@ const loginAdmin = async (request, h) => {
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      process.env.JWT_SECRET || 'secretkey',
+      process.env.JWT_SECRET || 'default_secret_key',
       { expiresIn: '1h' }
     );
 
@@ -110,7 +110,7 @@ const loginSiswa = async (request, h) => {
 
     const token = jwt.sign(
       { id: user.id, role: user.role },
-      process.env.JWT_SECRET || 'secretkey',
+      process.env.JWT_SECRET || 'default_secret_key',
       { expiresIn: '1h' }
     );
 
