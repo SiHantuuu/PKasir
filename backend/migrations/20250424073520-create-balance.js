@@ -2,29 +2,26 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Users', {
+    await queryInterface.createTable('Balances', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      Nama: {
-        type: Sequelize.STRING,
+      Amount: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0,
       },
-      NFCId: {
-        type: Sequelize.STRING,
-      },
-      Pin: {
-        type: Sequelize.STRING,
-      },
-      Password: {
-        type: Sequelize.STRING,
-      },
-      role: {
-        type: Sequelize.ENUM('murid', 'admin'),
+      UserId: {
+        type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 'murid',
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       createdAt: {
         allowNull: false,
@@ -35,8 +32,11 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+
+    // Create index for faster lookups
+    await queryInterface.addIndex('Balances', ['UserId']);
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Users');
+    await queryInterface.dropTable('Balances');
   },
 };
