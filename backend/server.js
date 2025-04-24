@@ -1,8 +1,13 @@
 require('dotenv').config(); // Load environment variables dari .env
 const Hapi = require('@hapi/hapi');
 const Sequelize = require('sequelize');
+const Jwt = require('@hapi/jwt');
+
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const categorytRoutes = require('./routes/categoryRoutes');
+const topupRoutes = require('./routes/topupRoutes');
+const transcationtRoutes = require('./routes/transactionRoutes');
 
 // Ambil konfigurasi database
 const env = process.env.NODE_ENV || 'development';
@@ -46,9 +51,34 @@ const init = async () => {
     },
   });
 
+  // Register JWT plugin
+  await server.register(Jwt);
+
+  // Set up JWT authentication strategy
+  server.auth.strategy('jwt', 'jwt', {
+    keys: process.env.JWT_SECRET || 'default_secret_key',
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      nbf: true,
+      exp: true,
+      maxAgeSec: 14400,
+    },
+    validate: (artifacts, request, h) => {
+      return {
+        isValid: true,
+        credentials: { user: artifacts.decoded.payload },
+      };
+    },
+  });
+
   // Daftarkan routes
   server.route(authRoutes);
   server.route(productRoutes);
+  server.route(categorytRoutes);
+  server.route(topupRoutes);
+  server.route(transcationtRoutes);
 
   // Jalankan server
   await server.start();

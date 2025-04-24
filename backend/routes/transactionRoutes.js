@@ -1,5 +1,5 @@
 const transactionController = require('../controllers/transactionController');
-const Joi = require('@hapi/joi'); // Assuming you're using Joi for validation
+const Joi = require('joi');
 
 const transactionRoutes = [
   // CREATE
@@ -54,7 +54,7 @@ const transactionRoutes = [
   // READ - Get transactions by user
   {
     method: 'GET',
-    path: '/transactions/user/{userId}',
+    path: '/transactions/user/{id}',
     handler: transactionController.getTransactionsByUser,
     options: {
       auth: 'jwt',
