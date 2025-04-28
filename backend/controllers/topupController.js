@@ -14,6 +14,72 @@ const postUserId = async (request, h) => {
   }
 };
 
+// New function to get user by NFC ID
+const getUserByNFC = async (request, h) => {
+  const { nfcId } = request.params;
+  try {
+    const user = await User.findOne({
+      where: { NFCId: nfcId },
+      include: [
+        {
+          model: Balance,
+          as: 'balance',
+          attributes: ['Amount'],
+        },
+      ],
+      attributes: ['id', 'Nama', 'NFCId', 'role'],
+    });
+
+    if (!user) return h.response({ message: 'User not found' }).code(404);
+
+    return h
+      .response({
+        id: user.id,
+        Nama: user.Nama,
+        NFCId: user.NFCId,
+        role: user.role,
+        Balance: user.balance ? user.balance.Amount : 0,
+      })
+      .code(200);
+  } catch (error) {
+    console.error('Error fetching user by NFC ID:', error);
+    return h.response({ error: 'Failed to fetch user' }).code(500);
+  }
+};
+
+// Alternative version that accepts NFC ID in the request body
+const verifyUserByNFC = async (request, h) => {
+  const { nfcId } = request.payload;
+  try {
+    const user = await User.findOne({
+      where: { NFCId: nfcId },
+      include: [
+        {
+          model: Balance,
+          as: 'balance',
+          attributes: ['Amount'],
+        },
+      ],
+      attributes: ['id', 'Nama', 'NFCId', 'role'],
+    });
+
+    if (!user) return h.response({ message: 'User not found' }).code(404);
+
+    return h
+      .response({
+        id: user.id,
+        Nama: user.Nama,
+        NFCId: user.NFCId,
+        role: user.role,
+        Balance: user.balance ? user.balance.Amount : 0,
+      })
+      .code(200);
+  } catch (error) {
+    console.error('Error verifying user by NFC ID:', error);
+    return h.response({ error: 'Failed to verify user' }).code(500);
+  }
+};
+
 const getUserInfo = async (request, h) => {
   const { userId } = request.params;
   try {
@@ -177,4 +243,6 @@ module.exports = {
   getUserInfo,
   getUserTransactionHistory,
   topUpBalance,
+  getUserByNFC,
+  verifyUserByNFC,
 };
