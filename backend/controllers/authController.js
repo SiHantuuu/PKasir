@@ -8,6 +8,17 @@ const register = async (request, h) => {
     let { Nama, NFCId, Pin, Password, Amount, role } = request.payload;
     role = role || 'murid'; // Default to "murid" if not specified
 
+    // Check if name already exists
+    const existingName = await User.findOne({ where: { Nama } });
+    if (existingName) {
+      return h.response({ message: 'Nama sudah digunakan' }).code(400);
+    }
+
+    // Check if NFCId already exists
+    const existingNFC = await User.findOne({ where: { NFCId } });
+    if (existingNFC) {
+      return h.response({ message: 'NFC ID sudah digunakan' }).code(400);
+    }
     if (role === 'admin') {
       if (!Password) {
         return h
@@ -17,9 +28,9 @@ const register = async (request, h) => {
       Password = await bcrypt.hash(Password, 10);
       Pin = null; // Admin doesn't need PIN
     } else if (role === 'murid') {
-      if (!Pin || !/^\d{6}$/.test(Pin)) {
+      if (!Pin || !/^\d{4}$/.test(Pin)) {
         return h
-          .response({ message: 'Murid harus memiliki PIN 6 angka' })
+          .response({ message: 'Murid harus memiliki PIN 4 angka' })
           .code(400);
       }
       Pin = await bcrypt.hash(Pin, 10);
@@ -96,9 +107,8 @@ const loginAdmin = async (request, h) => {
 
 const loginSiswa = async (request, h) => {
   try {
-    const { Nama, Pin } = request.payload;
-
-    const user = await User.findOne({ where: { Nama, role: 'murid' } });
+    const { NFCId, Pin } = request.payload;
+    const user = await User.findOne({ where: { NFCId, role: 'murid' } });
     if (!user) {
       return h.response({ message: 'Murid not found' }).code(404);
     }
