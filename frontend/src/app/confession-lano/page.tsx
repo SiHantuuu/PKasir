@@ -18,6 +18,7 @@ export default function ConfessionPage() {
     "I love the way your eyes sparkle when you laugh.",
     "Your strength and determination are truly admirable.",
     "Being with you makes every moment special and meaningful.",
+    "Ayo kita ke NightOwls, Manahan",
   ]
 
   useEffect(() => {
