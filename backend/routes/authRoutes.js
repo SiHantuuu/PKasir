@@ -16,11 +16,11 @@ const authRoutes = [
     path: '/login/murid',
     handler: authController.loginSiswa,
   },
-  {
-    method: 'GET',
-    path: '/user/nfc/{NFCId}',
-    handler: authController.getUserByNFC,
-  },
+  // {
+  //   method: 'GET',
+  //   path: '/user/nfc/{NFCId}',
+  //   handler: authController.getUserByNFC,
+  // },
   {
     method: 'GET',
     path: '/user/{id}',
