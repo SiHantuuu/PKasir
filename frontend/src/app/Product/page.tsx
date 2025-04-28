@@ -1,9 +1,7 @@
 "use client"
 
 import { DialogTrigger } from "@/components/ui/dialog"
-
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -20,16 +18,11 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 import ProductAnalytics from "@/components/product-analytics"
-
-// Add these imports at the top with the other imports
 import { useScroll, useSpring } from "framer-motion"
+import { categoryService } from "@/services/categoryService"
 
-const ITEMS_PER_PAGE = 8 // Changed back to 8 products per page
+const ITEMS_PER_PAGE = 8
 
-// Sample categories
-const categories = ["All", "Electronics", "Clothing", "Home"]
-
-// Add this component definition before the NewItemDialog component
 const ProgressBar = () => {
   const { scrollYProgress } = useScroll()
   const scaleX = useSpring(scrollYProgress, {
@@ -41,14 +34,13 @@ const ProgressBar = () => {
   return <motion.div className="fixed top-0 left-0 right-0 h-1 bg-primary z-50 origin-left" style={{ scaleX }} />
 }
 
-function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClose: () => void; categories: string[] }) {
   const [name, setName] = useState("")
   const [price, setPrice] = useState("")
   const [category, setCategory] = useState("")
   const [image, setImage] = useState("/placeholder.svg")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Inside the NewItemDialog component, add this useEffect hook
   useEffect(() => {
     if (!isOpen) {
       setName("")
@@ -58,11 +50,9 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
     }
   }, [isOpen])
 
-  // Modify the handleSubmit function
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log("New Item:", { name, price: Number.parseFloat(price), category, image })
-    // Reset the form
     setName("")
     setPrice("")
     setCategory("")
@@ -101,18 +91,8 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
             </DialogTitle>
           </DialogHeader>
           <Separator className="my-4" />
-          <motion.div
-            className="grid gap-4 py-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.div
-              className="grid grid-cols-4 items-center gap-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
+          <motion.div className="grid gap-4 py-4">
+            <motion.div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-name" className="text-right">
                 Name
               </Label>
@@ -125,12 +105,7 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 className="col-span-3"
               />
             </motion.div>
-            <motion.div
-              className="grid grid-cols-4 items-center gap-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
+            <motion.div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-price" className="text-right">
                 Price
               </Label>
@@ -145,12 +120,7 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 className="col-span-3"
               />
             </motion.div>
-            <motion.div
-              className="grid grid-cols-4 items-center gap-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
+            <motion.div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-category" className="text-right">
                 Category
               </Label>
@@ -167,12 +137,7 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                 </SelectContent>
               </Select>
             </motion.div>
-            <motion.div
-              className="grid grid-cols-4 items-center gap-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-image" className="text-right">
                 Image
               </Label>
@@ -198,12 +163,7 @@ function NewItemDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
               </div>
             </motion.div>
           </motion.div>
-          <motion.div
-            className="flex justify-end"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
+          <motion.div className="flex justify-end">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button onClick={handleSubmit}>Add Product</Button>
             </motion.div>
@@ -229,6 +189,8 @@ export default function Page() {
   const [pageDirection, setPageDirection] = useState(0)
   const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("products")
+  const [categories, setCategories] = useState<string[]>(["All"])
+  const [isLoading, setIsLoading] = useState(false)
 
   // Sample product data
   const products = [
@@ -252,10 +214,40 @@ export default function Page() {
     { id: 18, name: "Product 18", price: 189.99, image: "/placeholder.svg", category: "Home" },
   ]
 
-  const handleCreateCategory = () => {
-    console.log("New category created:", newCategory)
-    setNewCategory("")
-    setIsDialogOpen(false)
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoading(true)
+      try {
+        const fetchedCategories = await categoryService.getAllCategories()
+        setCategories(["All", ...fetchedCategories.map((cat: any) => cat.name)])
+      } catch (error) {
+        console.error("Failed to fetch categories:", error)
+      } finally {
+        setIsLoading(false)
+        setIsPageLoaded(true)
+      }
+    }
+
+    fetchCategories()
+  }, [])
+
+  const handleCreateCategory = async () => {
+    if (!newCategory.trim()) return
+    
+    try {
+      setIsLoading(true)
+      await categoryService.createCategory({ name: newCategory })
+      // Refresh categories
+      const fetchedCategories = await categoryService.getAllCategories()
+      setCategories(["All", ...fetchedCategories.map((cat: any) => cat.name)])
+      setNewCategory("")
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error("Failed to create category:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -267,11 +259,7 @@ export default function Page() {
     })
     setFilteredProducts(filtered)
     setCurrentPage(1)
-  }, [selectedCategory, searchQuery])
-
-  useEffect(() => {
-    setIsPageLoaded(true)
-  }, [])
+  }, [selectedCategory, searchQuery, categories])
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -289,7 +277,6 @@ export default function Page() {
   const handleDeleteProduct = (productId: number) => {
     console.log(`Delete product ${productId}`)
     setIsEditDialogOpen(false)
-    // Here you would typically delete the product from your data source
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,7 +363,6 @@ export default function Page() {
     return pageNumbers
   }
 
-  // Then add the ProgressBar component inside the SidebarInset, just after it opens:
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -424,9 +410,9 @@ export default function Page() {
                 transition={{ delay: 0.4 }}
                 className="flex items-center gap-2"
               >
-                <Select onValueChange={setSelectedCategory}>
+                <Select onValueChange={setSelectedCategory} disabled={isLoading}>
                   <SelectTrigger className="w-[180px] bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md">
-                    <SelectValue placeholder="Select Category" />
+                    <SelectValue placeholder={isLoading ? "Loading..." : "Select Category"} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -442,6 +428,7 @@ export default function Page() {
                       <Button
                         variant="outline"
                         className="bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md"
+                        disabled={isLoading}
                       >
                         New Category
                       </Button>
@@ -465,12 +452,7 @@ export default function Page() {
                         </DialogTitle>
                       </DialogHeader>
                       <Separator className="my-4" />
-                      <motion.div
-                        className="grid gap-4 py-4"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                      >
+                      <motion.div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="name" className="text-right">
                             Name
@@ -480,17 +462,18 @@ export default function Page() {
                             value={newCategory}
                             onChange={(e) => setNewCategory(e.target.value)}
                             className="col-span-3"
+                            disabled={isLoading}
                           />
                         </div>
                       </motion.div>
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                      >
+                      <motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button onClick={handleCreateCategory} className="w-full">
-                            Create Category
+                          <Button 
+                            onClick={handleCreateCategory} 
+                            className="w-full"
+                            disabled={isLoading || !newCategory.trim()}
+                          >
+                            {isLoading ? "Creating..." : "Create Category"}
                           </Button>
                         </motion.div>
                       </motion.div>
@@ -498,7 +481,11 @@ export default function Page() {
                   </DialogContent>
                 </Dialog>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button onClick={() => setIsNewItemDialogOpen(true)} className="bg-primary text-primary-foreground">
+                  <Button 
+                    onClick={() => setIsNewItemDialogOpen(true)} 
+                    className="bg-primary text-primary-foreground"
+                    disabled={isLoading}
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" /> New Item
                   </Button>
                 </motion.div>
@@ -629,18 +616,8 @@ export default function Page() {
             </DialogHeader>
             <Separator className="my-4" />
             {selectedProduct && (
-              <motion.div
-                className="grid gap-4 py-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <motion.div
-                  className="grid grid-cols-4 items-center gap-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
+              <motion.div className="grid gap-4 py-4">
+                <motion.div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right">
                     Name
                   </Label>
@@ -651,12 +628,7 @@ export default function Page() {
                     className="col-span-3"
                   />
                 </motion.div>
-                <motion.div
-                  className="grid grid-cols-4 items-center gap-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
+                <motion.div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="price" className="text-right">
                     Price
                   </Label>
@@ -673,12 +645,7 @@ export default function Page() {
                     className="col-span-3"
                   />
                 </motion.div>
-                <motion.div
-                  className="grid grid-cols-4 items-center gap-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
+                <motion.div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="category" className="text-right">
                     Category
                   </Label>
@@ -698,12 +665,7 @@ export default function Page() {
                     </SelectContent>
                   </Select>
                 </motion.div>
-                <motion.div
-                  className="grid grid-cols-4 items-center gap-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
+                <motion.div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="image" className="text-right">
                     Image
                   </Label>
@@ -730,12 +692,7 @@ export default function Page() {
                 </motion.div>
               </motion.div>
             )}
-            <motion.div
-              className="flex justify-between"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
+            <motion.div className="flex justify-between">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button variant="destructive" onClick={() => handleDeleteProduct(selectedProduct.id)}>
                   Delete Product
@@ -748,8 +705,11 @@ export default function Page() {
           </motion.div>
         </DialogContent>
       </Dialog>
-      <NewItemDialog isOpen={isNewItemDialogOpen} onClose={() => setIsNewItemDialogOpen(false)} />
+      <NewItemDialog 
+        isOpen={isNewItemDialogOpen} 
+        onClose={() => setIsNewItemDialogOpen(false)} 
+        categories={categories}
+      />
     </SidebarProvider>
   )
 }
-

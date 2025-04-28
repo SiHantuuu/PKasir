@@ -11,16 +11,16 @@ const topupRoutes = [
       tags: ["api", "user"],
     },
   },
-  {
-    method: "GET",
-    path: "/user/{userId}",
-    handler: topupController.getUserInfo,
-    options: {
-      description: "Ambil informasi user",
-      notes: "Mengembalikan nama dan balance user berdasarkan ID",
-      tags: ["api", "user"],
-    },
-  },
+  // {
+  //   method: "GET",
+  //   path: "/user/{userId}",
+  //   handler: topupController.getUserInfo,
+  //   options: {
+  //     description: "Ambil informasi user",
+  //     notes: "Mengembalikan nama dan balance user berdasarkan ID",
+  //     tags: ["api", "user"],
+  //   },
+  // },
   {
     method: "GET",
     path: "/history/{userId}",
