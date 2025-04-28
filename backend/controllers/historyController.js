@@ -1,7 +1,7 @@
 const { Transaction, Product, User, Balance, sequelize } = require('../models');
 
-// CREATE - Process a new transaction
-const processTransaction = async (request, h) => {
+// CREATE - Process a new history
+const processhistory = async (request, h) => {
   const { userId, totalPrice, productId } = request.payload;
 
   // Input validation
@@ -14,11 +14,11 @@ const processTransaction = async (request, h) => {
     return h.response({ message: 'Invalid input parameters' }).code(400);
   }
 
-  const t = await sequelize.transaction();
+  const t = await sequelize.history();
 
   try {
     // 1. Verify the product exists
-    const product = await Product.findByPk(productId, { transaction: t });
+    const product = await Product.findByPk(productId, { history: t });
     if (!product) {
       await t.rollback();
       return h.response({ message: 'Product not found' }).code(404);
@@ -27,7 +27,7 @@ const processTransaction = async (request, h) => {
     // 2. Get user and check balance
     const user = await User.findByPk(userId, {
       include: [{ model: Balance, as: 'balance' }],
-      transaction: t,
+      history: t,
     });
 
     if (!user) {
@@ -48,46 +48,46 @@ const processTransaction = async (request, h) => {
       return h.response({ message: 'Insufficient balance' }).code(400);
     }
 
-    // 4. Create new transaction
-    const newTransaction = await Transaction.create(
+    // 4. Create new history
+    const newhistory = await history.create(
       {
-        TransactionDate: new Date(),
+        historyDate: new Date(),
         ProductId: productId,
         CustomerId: userId,
         Amount: totalPrice,
-        TransactionType: 'PURCHASE',
+        historyType: 'PURCHASE',
         Description: `Purchase of product ID: ${productId}`,
       },
-      { transaction: t }
+      { history: t }
     );
 
     // 5. Update user balance
     const newBalance = currentBalance - totalPrice;
-    await user.balance.update({ Amount: newBalance }, { transaction: t });
+    await user.balance.update({ Amount: newBalance }, { history: t });
 
-    // Commit the transaction
+    // Commit the history
     await t.commit();
 
     return h
       .response({
-        message: 'Transaction successful',
-        transactionId: newTransaction.id,
+        message: 'history successful',
+        historyId: newhistory.id,
         newBalance: newBalance,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('Transaction processing error:', error.message);
+    console.error('history processing error:', error.message);
     return h
-      .response({ error: 'Transaction failed. Please try again later.' })
+      .response({ error: 'history failed. Please try again later.' })
       .code(500);
   }
 };
 
-// READ - Get all transactions
-const getAllTransactions = async (request, h) => {
+// READ - Get all history
+const getAllhistory = async (request, h) => {
   try {
-    const transactions = await Transaction.findAll({
+    const history = await Transaction.findAll({
       include: [
         {
           model: User,
@@ -102,28 +102,28 @@ const getAllTransactions = async (request, h) => {
       ],
     });
 
-    return h.response(transactions).code(200);
+    return h.response(history).code(200);
   } catch (error) {
-    console.error('Get all transactions error:', error.message);
+    console.error('Get all history error:', error.message);
     return h
       .response({
-        error: 'Failed to fetch transactions. Please try again later.',
+        error: 'Failed to fetch history. Please try again later.',
       })
       .code(500);
   }
 };
 
-// READ - Get transaction by ID
-const getTransactionById = async (request, h) => {
+// READ - Get history by ID
+const gethistoryById = async (request, h) => {
   const { id } = request.params;
 
   // Input validation
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid transaction ID' }).code(400);
+    return h.response({ message: 'Invalid history ID' }).code(400);
   }
 
   try {
-    const transaction = await Transaction.findByPk(id, {
+    const history = await history.findByPk(id, {
       include: [
         {
           model: User,
@@ -138,23 +138,23 @@ const getTransactionById = async (request, h) => {
       ],
     });
 
-    if (!transaction) {
-      return h.response({ message: 'Transaction not found' }).code(404);
+    if (!history) {
+      return h.response({ message: 'history not found' }).code(404);
     }
 
-    return h.response(transaction).code(200);
+    return h.response(history).code(200);
   } catch (error) {
-    console.error('Get transaction by ID error:', error.message);
+    console.error('Get history by ID error:', error.message);
     return h
       .response({
-        error: 'Failed to fetch transaction. Please try again later.',
+        error: 'Failed to fetch history. Please try again later.',
       })
       .code(500);
   }
 };
 
-// READ - Get transactions by user ID
-const getTransactionsByUser = async (request, h) => {
+// READ - Get history by user ID
+const gethistoryByUser = async (request, h) => {
   const { userId } = request.params;
 
   // Input validation
@@ -169,7 +169,7 @@ const getTransactionsByUser = async (request, h) => {
       return h.response({ message: 'User not found' }).code(404);
     }
 
-    const transactions = await Transaction.findAll({
+    const history = await history.findAll({
       where: { CustomerId: userId },
       include: [
         {
@@ -178,103 +178,103 @@ const getTransactionsByUser = async (request, h) => {
           attributes: ['id', 'ProductName', 'Price', 'CategoryId'],
         },
       ],
-      order: [['TransactionDate', 'DESC']], // Order by date, newest first
+      order: [['historyDate', 'DESC']], // Order by date, newest first
     });
 
-    return h.response(transactions).code(200);
+    return h.response(history).code(200);
   } catch (error) {
-    console.error('Get transactions by user error:', error.message);
+    console.error('Get history by user error:', error.message);
     return h
       .response({
-        error: 'Failed to fetch user transactions. Please try again later.',
+        error: 'Failed to fetch user history. Please try again later.',
       })
       .code(500);
   }
 };
 
-// UPDATE - Update transaction details
-const updateTransaction = async (request, h) => {
+// UPDATE - Update history details
+const updatehistory = async (request, h) => {
   const { id } = request.params;
   const { description } = request.payload;
 
   // Input validation
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid transaction ID' }).code(400);
+    return h.response({ message: 'Invalid history ID' }).code(400);
   }
 
   if (!description || description.trim() === '') {
     return h.response({ message: 'Description cannot be empty' }).code(400);
   }
 
-  const t = await sequelize.transaction();
+  const t = await sequelize.history();
 
   try {
-    const transaction = await Transaction.findByPk(id, { transaction: t });
+    const history = await history.findByPk(id, { history: t });
 
-    if (!transaction) {
+    if (!history) {
       await t.rollback();
-      return h.response({ message: 'Transaction not found' }).code(404);
+      return h.response({ message: 'history not found' }).code(404);
     }
 
     // Only allowing description updates in this example
-    await transaction.update({ Description: description }, { transaction: t });
+    await history.update({ Description: description }, { history: t });
 
     await t.commit();
 
     return h
       .response({
-        message: 'Transaction updated successfully',
-        transaction,
+        message: 'history updated successfully',
+        history,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('Update transaction error:', error.message);
+    console.error('Update history error:', error.message);
     return h
       .response({
-        error: 'Failed to update transaction. Please try again later.',
+        error: 'Failed to update history. Please try again later.',
       })
       .code(500);
   }
 };
 
-// DELETE - Cancel/delete a transaction
-const deleteTransaction = async (request, h) => {
+// DELETE - Cancel/delete a history
+const deletehistory = async (request, h) => {
   const { id } = request.params;
 
   // Input validation
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid transaction ID' }).code(400);
+    return h.response({ message: 'Invalid history ID' }).code(400);
   }
 
-  const t = await sequelize.transaction();
+  const t = await sequelize.history();
 
   try {
-    const transaction = await Transaction.findByPk(id, {
-      transaction: t,
+    const history = await history.findByPk(id, {
+      history: t,
     });
 
-    if (!transaction) {
+    if (!history) {
       await t.rollback();
-      return h.response({ message: 'Transaction not found' }).code(404);
+      return h.response({ message: 'history not found' }).code(404);
     }
 
-    // Check if transaction is within refund time window (24 hours)
-    const transactionTime = new Date(transaction.TransactionDate);
+    // Check if history is within refund time window (24 hours)
+    const historyTime = new Date(history.historyDate);
     const currentTime = new Date();
-    const diffHours = (currentTime - transactionTime) / (1000 * 60 * 60);
+    const diffHours = (currentTime - historyTime) / (1000 * 60 * 60);
 
     if (diffHours > 24) {
       await t.rollback();
       return h
-        .response({ message: 'Transaction cannot be refunded after 24 hours' })
+        .response({ message: 'history cannot be refunded after 24 hours' })
         .code(400);
     }
 
     // Get the user and balance
-    const user = await User.findByPk(transaction.CustomerId, {
+    const user = await User.findByPk(history.CustomerId, {
       include: [{ model: Balance, as: 'balance' }],
-      transaction: t,
+      history: t,
     });
 
     if (!user || !user.balance) {
@@ -284,38 +284,38 @@ const deleteTransaction = async (request, h) => {
 
     // Refund the user
     const currentBalance = user.balance.Amount;
-    const newBalance = currentBalance + transaction.Amount;
+    const newBalance = currentBalance + history.Amount;
 
-    await user.balance.update({ Amount: newBalance }, { transaction: t });
+    await user.balance.update({ Amount: newBalance }, { history: t });
 
-    // Delete the transaction
-    await transaction.destroy({ transaction: t });
+    // Delete the history
+    await history.destroy({ history: t });
 
     await t.commit();
 
     return h
       .response({
-        message: 'Transaction deleted and payment refunded',
-        refundAmount: transaction.Amount,
+        message: 'history deleted and payment refunded',
+        refundAmount: history.Amount,
         newBalance,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('Delete transaction error:', error.message);
+    console.error('Delete history error:', error.message);
     return h
       .response({
-        error: 'Failed to delete transaction. Please try again later.',
+        error: 'Failed to delete history. Please try again later.',
       })
       .code(500);
   }
 };
 
 module.exports = {
-  processTransaction,
-  getAllTransactions,
-  getTransactionById,
-  getTransactionsByUser,
-  updateTransaction,
-  deleteTransaction,
+  processhistory,
+  getAllhistory,
+  gethistoryById,
+  gethistoryByUser,
+  updatehistory,
+  deletehistory,
 };

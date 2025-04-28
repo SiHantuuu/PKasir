@@ -7,7 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const categorytRoutes = require('./routes/categoryRoutes');
 const topupRoutes = require('./routes/topupRoutes');
-const transcationtRoutes = require('./routes/transactionRoutes');
+const transcationtRoutes = require('./routes/historyRoutes');
 
 // Ambil konfigurasi database
 const env = process.env.NODE_ENV || 'development';

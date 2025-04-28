@@ -1,12 +1,12 @@
-const transactionController = require('../controllers/transactionController');
+const historyController = require('../controllers/historyController');
 const Joi = require('joi');
 
-const transactionRoutes = [
+const historyRoutes = [
   // CREATE
   {
     method: 'POST',
-    path: '/transaction',
-    handler: transactionController.processTransaction,
+    path: '/history',
+    handler: historyController.processhistory,
     options: {
       auth: 'jwt', // Assuming you have a JWT authentication strategy
       validate: {
@@ -19,13 +19,13 @@ const transactionRoutes = [
     },
   },
 
-  // READ - Get all transactions
+  // READ - Get all history
   {
     method: 'GET',
-    path: '/transactions',
-    handler: transactionController.getAllTransactions,
+    path: '/history',
+    handler: historyController.getAllhistory,
     options: {
-      auth: 'jwt',
+      // auth: 'jwt',
       // Add pagination options if needed
       // validate: {
       //   query: Joi.object({
@@ -36,13 +36,13 @@ const transactionRoutes = [
     },
   },
 
-  // READ - Get transaction by ID
+  // READ - Get history by ID
   {
     method: 'GET',
-    path: '/transaction/{id}',
-    handler: transactionController.getTransactionById,
+    path: '/history/{id}',
+    handler: historyController.gethistoryById,
     options: {
-      auth: 'jwt',
+      // auth: 'jwt',
       validate: {
         params: Joi.object({
           id: Joi.number().integer().positive().required(),
@@ -51,11 +51,11 @@ const transactionRoutes = [
     },
   },
 
-  // READ - Get transactions by user
+  // READ - Get history by user
   {
     method: 'GET',
-    path: '/transactions/user/{id}',
-    handler: transactionController.getTransactionsByUser,
+    path: '/history/user/{id}',
+    handler: historyController.gethistoryByUser,
     options: {
       auth: 'jwt',
       validate: {
@@ -69,8 +69,8 @@ const transactionRoutes = [
   // UPDATE
   {
     method: 'PUT',
-    path: '/transaction/{id}',
-    handler: transactionController.updateTransaction,
+    path: '/history/{id}',
+    handler: historyController.updatehistory,
     options: {
       auth: 'jwt',
       validate: {
@@ -87,8 +87,8 @@ const transactionRoutes = [
   // DELETE
   {
     method: 'DELETE',
-    path: '/transaction/{id}',
-    handler: transactionController.deleteTransaction,
+    path: '/history/{id}',
+    handler: historyController.deletehistory,
     options: {
       auth: 'jwt',
       validate: {
@@ -100,4 +100,4 @@ const transactionRoutes = [
   },
 ];
 
-module.exports = transactionRoutes;
+module.exports = historyRoutes;
