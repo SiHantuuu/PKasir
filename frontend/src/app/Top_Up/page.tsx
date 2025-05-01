@@ -13,6 +13,9 @@ import {
   Calendar,
   Nfc,
   User,
+  History,
+  Info,
+  ShoppingBag,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -44,6 +47,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { topupService } from '@/services/topupService';
+import { historyService } from '@/services/historyService';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 
 const ProgressBar = () => {
   const { scrollYProgress } = useScroll();
@@ -127,7 +137,92 @@ function NotificationDialog({
   );
 }
 
+// Helper function to safely format dates
+const safeFormatDate = (dateValue: any, formatStr: string = 'dd MMM yyyy, HH:mm') => {
+  try {
+    // Ensure we have a valid date
+    const date = dateValue ? new Date(dateValue) : new Date();
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    return format(date, formatStr);
+  } catch (error) {
+    console.error('Date formatting error:', error, dateValue);
+    return 'Invalid date';
+  }
+};
+
+interface HistoryItemProps {
+  history: any;
+  formatCurrency: (amount: number) => string;
+}
+
+const HistoryItem = ({ history, formatCurrency }: HistoryItemProps) => {
+  const productName = history.productName || history.description || "Purchase";
+  const amount = history.totalPrice || history.amount || 0;
+
+  return (
+    <motion.div
+      layout
+      variants={itemVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      transition={{
+        type: 'spring',
+        stiffness: 500,
+        damping: 50,
+        mass: 1,
+      }}
+    >
+      <motion.div
+        className={cn(
+          'flex items-center justify-between p-4 rounded-lg',
+          'bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md'
+        )}
+        whileHover={{
+          scale: 1.02,
+          transition: { duration: 0.2 },
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <motion.div
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500"
+            whileHover={{ rotate: 15 }}
+          >
+            <ShoppingBag className="w-5 h-5" />
+          </motion.div>
+          <div>
+            <div className="font-medium text-gray-800 dark:text-gray-200">
+              {productName}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {safeFormatDate(history.createdAt || history.date)}
+            </div>
+          </div>
+        </div>
+        <motion.div
+          className="text-lg font-medium text-destructive"
+          whileHover={{ scale: 1.1 }}
+        >
+          -{formatCurrency(Math.abs(amount))}
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const AnimatedButton = motion(Button);
+
+// Animation variants for items
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+};
 
 export default function Page() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
@@ -139,7 +234,9 @@ export default function Page() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('topup');
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -174,6 +271,7 @@ export default function Page() {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchTransactionHistory(user.id);
+      fetchPurchaseHistory(user.id);
     }
   }, [isAuthenticated, user]);
 
@@ -181,7 +279,7 @@ export default function Page() {
     setIsLoading(true);
     try {
       const history = await topupService.getUserTransactionHistory(userId);
-      setTransactions(history);
+      setTransactions(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error('Failed to fetch transaction history:', error);
       showNotification('Error', 'Failed to load transaction history.', 'error');
@@ -190,26 +288,83 @@ export default function Page() {
     }
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const transactionDate = new Date(transaction.date);
-    const matchesMonth =
-      selectedMonth === 'all' ||
-      (transactionDate.getMonth() + 1).toString() === selectedMonth;
-
-    const query = searchQuery.trim().toLowerCase();
-
-    // If search query is empty, don't filter by search
-    if (!query) {
-      return matchesMonth;
+  const fetchPurchaseHistory = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const history = await historyService.getHistoryByUser(userId);
+      console.log(`Data History ${userId} adalah ini ${JSON.stringify(history)}`)
+      
+      if (!history) {
+        throw new Error('No history data received');
+      }
+      
+      setPurchaseHistory(Array.isArray(history) ? history : []);
+    } catch (error) {
+      console.error('Failed to fetch purchase history:', error);
+      const errorMessage = error.message || 'Failed to load purchase history';
+      showNotification('Error', errorMessage, 'error');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    // Filter by username and transaction type
-    const userName = transaction.userName.toLowerCase();
-    const transactionType = transaction.type.toLowerCase();
-    const matchesSearch =
-      userName.includes(query) || transactionType.includes(query);
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (!transaction || !transaction.date) return false;
+    
+    try {
+      const transactionDate = new Date(transaction.date);
+      if (isNaN(transactionDate.getTime())) return false;
+      
+      const matchesMonth =
+        selectedMonth === 'all' ||
+        (transactionDate.getMonth() + 1).toString() === selectedMonth;
 
-    return matchesMonth && matchesSearch;
+      const query = searchQuery.trim().toLowerCase();
+
+      // If search query is empty, don't filter by search
+      if (!query) {
+        return matchesMonth;
+      }
+
+      // Filter by username and transaction type
+      const userName = (transaction.userName || '').toLowerCase();
+      const transactionType = (transaction.type || '').toLowerCase();
+      const matchesSearch =
+        userName.includes(query) || transactionType.includes(query);
+
+      return matchesMonth && matchesSearch;
+    } catch (error) {
+      console.error('Error filtering transaction:', error, transaction);
+      return false;
+    }
+  });
+
+  const filteredPurchaseHistory = purchaseHistory.filter((history) => {
+    if (!history) return false;
+    
+    try {
+      const historyDate = new Date(history.createdAt || history.date);
+      if (isNaN(historyDate.getTime())) return false;
+      
+      const matchesMonth =
+        selectedMonth === 'all' ||
+        (historyDate.getMonth() + 1).toString() === selectedMonth;
+    
+      const query = searchQuery.trim().toLowerCase();
+    
+      if (!query) {
+        return matchesMonth;
+      }
+    
+      // Filter by product name or description
+      const productName = (history.productName || history.description || '').toLowerCase();
+      const matchesSearch = productName.includes(query);
+    
+      return matchesMonth && matchesSearch;
+    } catch (error) {
+      console.error('Error filtering history:', error, history);
+      return false;
+    }
   });
 
   const formatCurrency = (amount: number) => {
@@ -377,16 +532,10 @@ export default function Page() {
     setSelectedAmount(null);
     setCustomAmount('');
     setTransactions([]);
+    setPurchaseHistory([]);
   };
 
   const isValidAmount = selectedAmount && selectedAmount >= 10000;
-
-  // Animasi untuk item transaksi
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
-  };
 
   if (!isAuthenticated) {
     return (
@@ -573,7 +722,7 @@ export default function Page() {
                   </AlertDescription>
                 </Alert>
               </motion.div>
-
+  
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Profile Card */}
                 <motion.div
@@ -622,7 +771,7 @@ export default function Page() {
                     </CardContent>
                   </Card>
                 </motion.div>
-
+  
                 {/* Top Up Card */}
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
@@ -720,8 +869,8 @@ export default function Page() {
                   </Card>
                 </motion.div>
               </div>
-
-              {/* Transaction History with Month Filter */}
+  
+              {/* Transaction History with Tabs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -754,10 +903,7 @@ export default function Page() {
                             </SelectTrigger>
                             <SelectContent>
                               {months.map((month) => (
-                                <SelectItem
-                                  key={month.value}
-                                  value={month.value}
-                                >
+                                <SelectItem key={month.value} value={month.value}>
                                   {month.label}
                                 </SelectItem>
                               ))}
@@ -780,99 +926,229 @@ export default function Page() {
                         </motion.div>
                       </div>
                     </div>
-                    <motion.div layout className="space-y-4">
-                      <AnimatePresence mode="popLayout">
-                        {filteredTransactions.length > 0 ? (
-                          filteredTransactions.map((transaction) => (
-                            <motion.div
-                              key={transaction.id}
-                              layout
-                              variants={itemVariants}
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              transition={{
-                                type: 'spring',
-                                stiffness: 500,
-                                damping: 50,
-                                mass: 1,
-                              }}
-                            >
+  
+                    <Tabs defaultValue="all">
+                      <TabsList className=" mb-4">
+                        <TabsTrigger value="all">All Transactions</TabsTrigger>
+                      </TabsList>
+  
+                      <TabsContent value="all">
+                        <motion.div layout className="space-y-4">
+                          <AnimatePresence mode="popLayout">
+                            {[...filteredTransactions, ...filteredPurchaseHistory].length > 0 ? (
+                              [...filteredTransactions, ...filteredPurchaseHistory]
+                                .sort((a, b) => {
+                                  const dateA = new Date(a.date || a.TransactionDate || a.createdAt);
+                                  const dateB = new Date(b.date || b.TransactionDate || b.createdAt);
+                                  return dateB.getTime() - dateA.getTime();
+                                })
+                                .map((item) => {
+                                  // Determine if this is a top-up or purchase
+                                  const isTopUp = 
+                                    item.type === 'top-up' || 
+                                    item.TransactionType === 'TOP_UP' || 
+                                    item.TransactionType === 'topup';
+                                  
+                                  // Get the appropriate amount
+                                  const amount = item.amount || item.Amount || 0;
+                                  
+                                  // Get product/description info
+                                  const description = 
+                                    (item.product?.ProductName) || 
+                                    item.Description || 
+                                    item.description || 
+                                    (isTopUp ? 'Top Up' : 'Purchase');
+                                  
+                                  // Get date
+                                  const date = item.date || item.TransactionDate || item.createdAt;
+                                  
+                                  return (
+                                    <motion.div
+                                      key={item.id}
+                                      layout
+                                      variants={itemVariants}
+                                      initial="hidden"
+                                      animate="visible"
+                                      exit="exit"
+                                      transition={{
+                                        type: 'spring',
+                                        stiffness: 500,
+                                        damping: 50,
+                                        mass: 1,
+                                      }}
+                                    >
+                                      <motion.div
+                                        className={cn(
+                                          'flex items-center justify-between p-4 rounded-lg',
+                                          'bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md'
+                                        )}
+                                        whileHover={{
+                                          scale: 1.02,
+                                          transition: { duration: 0.2 },
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-4">
+                                          <motion.div
+                                            className={cn(
+                                              'w-10 h-10 rounded-full flex items-center justify-center',
+                                              isTopUp
+                                                ? 'bg-primary/10 text-primary'
+                                                : 'bg-destructive/10 text-destructive'
+                                            )}
+                                            whileHover={{
+                                              rotate: isTopUp ? 90 : -90,
+                                            }}
+                                          >
+                                            {isTopUp ? (
+                                              <ArrowRight className="w-5 h-5" />
+                                            ) : (
+                                              <ShoppingBag className="w-5 h-5" />
+                                            )}
+                                          </motion.div>
+                                          <div>
+                                            <div className="font-medium text-gray-800 dark:text-gray-200">
+                                              {description}
+                                            </div>
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                              {safeFormatDate(date)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <motion.div
+                                          className={cn(
+                                            'text-lg font-medium',
+                                            isTopUp
+                                              ? 'text-primary'
+                                              : 'text-destructive'
+                                          )}
+                                          whileHover={{ scale: 1.1 }}
+                                        >
+                                          {isTopUp ? '+' : '-'}
+                                          {formatCurrency(Math.abs(amount))}
+                                        </motion.div>
+                                      </motion.div>
+                                    </motion.div>
+                                  );
+                                })
+                            ) : (
                               <motion.div
-                                className={cn(
-                                  'flex items-center justify-between p-4 rounded-lg',
-                                  'bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md'
-                                )}
-                                whileHover={{
-                                  scale: 1.02,
-                                  transition: { duration: 0.2 },
-                                }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-center py-8 text-gray-500 dark:text-gray-400"
                               >
-                                <div className="flex items-center gap-4">
+                                No transactions found
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      </TabsContent>
+  
+                      <TabsContent value="topup">
+                        <motion.div layout className="space-y-4">
+                          <AnimatePresence mode="popLayout">
+                            {filteredTransactions.length > 0 ? (
+                              filteredTransactions.map((transaction) => (
+                                <motion.div
+                                  key={transaction.id}
+                                  layout
+                                  variants={itemVariants}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  transition={{
+                                    type: 'spring',
+                                    stiffness: 500,
+                                    damping: 50,
+                                    mass: 1,
+                                  }}
+                                >
                                   <motion.div
                                     className={cn(
-                                      'w-10 h-10 rounded-full flex items-center justify-center',
-                                      transaction.type === 'top-up'
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'bg-destructive/10 text-destructive'
+                                      'flex items-center justify-between p-4 rounded-lg',
+                                      'bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm border-0 shadow-md'
                                     )}
                                     whileHover={{
-                                      rotate:
-                                        transaction.type === 'top-up'
-                                          ? 90
-                                          : -90,
+                                      scale: 1.02,
+                                      transition: { duration: 0.2 },
                                     }}
                                   >
-                                    <ArrowRight className="w-5 h-5" />
+                                    <div className="flex items-center gap-4">
+                                      <motion.div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/10 text-primary"
+                                        whileHover={{ rotate: 90 }}
+                                      >
+                                        <ArrowRight className="w-5 h-5" />
+                                      </motion.div>
+                                      <div>
+                                        <div className="font-medium text-gray-800 dark:text-gray-200">
+                                          Top Up
+                                        </div>
+                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                          {safeFormatDate(transaction.date)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <motion.div
+                                      className="text-lg font-medium text-primary"
+                                      whileHover={{ scale: 1.1 }}
+                                    >
+                                      +{formatCurrency(Math.abs(transaction.amount))}
+                                    </motion.div>
                                   </motion.div>
-                                  <div>
-                                    <div className="font-medium text-gray-800 dark:text-gray-200">
-                                      {transaction.type === 'top-up'
-                                        ? 'Top Up'
-                                        : 'Payment'}
-                                    </div>
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                      {format(
-                                        new Date(transaction.date),
-                                        'dd MMM yyyy, HH:mm'
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <motion.div
-                                  className={cn(
-                                    'text-lg font-medium',
-                                    transaction.type === 'top-up'
-                                      ? 'text-primary'
-                                      : 'text-destructive'
-                                  )}
-                                  whileHover={{ scale: 1.1 }}
-                                >
-                                  {transaction.type === 'top-up' ? '+' : '-'}
-                                  {formatCurrency(Math.abs(transaction.amount))}
                                 </motion.div>
+                              ))
+                            ) : (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-center py-8 text-gray-500 dark:text-gray-400"
+                              >
+                                No top-ups found
                               </motion.div>
-                            </motion.div>
-                          ))
-                        ) : (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="text-center py-8 text-gray-500 dark:text-gray-400"
-                          >
-                            No transactions found
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      </TabsContent>
+  
+                      <TabsContent value="purchase">
+                        <motion.div layout className="space-y-4">
+                          <AnimatePresence mode="popLayout">
+                            {filteredPurchaseHistory.length > 0 ? (
+                              filteredPurchaseHistory
+                                .filter((item) => {
+                                  const type = item.TransactionType || '';
+                                  return type.toLowerCase() === 'purchase';
+                                })
+                                .map((purchase) => (
+                                  <HistoryItem 
+                                    key={purchase.id} 
+                                    history={purchase} 
+                                    formatCurrency={formatCurrency} 
+                                  />
+                                ))
+                            ) : (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-center py-8 text-gray-500 dark:text-gray-400"
+                              >
+                                No purchases found
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
               </motion.div>
             </motion.div>
           </div>
         </div>
-
+  
         <NotificationDialog
           isOpen={notification.isOpen}
           onClose={() =>

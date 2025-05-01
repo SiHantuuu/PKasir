@@ -1,93 +1,93 @@
 const { Transaction, Product, User, Balance, sequelize } = require('../models');
 
-// CREATE - Process a new history
-const processhistory = async (request, h) => {
+// CREATE - Proses riwayat baru
+const processHistory = async (request, h) => {
   const { userId, totalPrice, productId } = request.payload;
 
-  // Input validation
+  // Validasi input
   if (
     isNaN(userId) ||
     isNaN(totalPrice) ||
     isNaN(productId) ||
     totalPrice <= 0
   ) {
-    return h.response({ message: 'Invalid input parameters' }).code(400);
+    return h.response({ message: 'Parameter input tidak valid' }).code(400);
   }
 
-  const t = await sequelize.history();
+  const t = await sequelize.transaction();
 
   try {
-    // 1. Verify the product exists
-    const product = await Product.findByPk(productId, { history: t });
+    // 1. Verifikasi produk ada
+    const product = await Product.findByPk(productId, { transaction: t });
     if (!product) {
       await t.rollback();
-      return h.response({ message: 'Product not found' }).code(404);
+      return h.response({ message: 'Produk tidak ditemukan' }).code(404);
     }
 
-    // 2. Get user and check balance
+    // 2. Dapatkan user dan cek saldo
     const user = await User.findByPk(userId, {
       include: [{ model: Balance, as: 'balance' }],
-      history: t,
+      transaction: t,
     });
 
     if (!user) {
       await t.rollback();
-      return h.response({ message: 'User not found' }).code(404);
+      return h.response({ message: 'User tidak ditemukan' }).code(404);
     }
 
     if (!user.balance) {
       await t.rollback();
-      return h.response({ message: 'User has no balance record' }).code(400);
+      return h.response({ message: 'User tidak memiliki catatan saldo' }).code(400);
     }
 
     const currentBalance = user.balance.Amount;
 
-    // 3. Check if user has enough balance
+    // 3. Cek apakah user memiliki saldo cukup
     if (currentBalance < totalPrice) {
       await t.rollback();
-      return h.response({ message: 'Insufficient balance' }).code(400);
+      return h.response({ message: 'Saldo tidak mencukupi' }).code(400);
     }
 
-    // 4. Create new history
-    const newhistory = await history.create(
+    // 4. Membuat history baru
+    const newHistory = await Transaction.create(
       {
-        historyDate: new Date(),
+        TransactionDate: new Date(),
         ProductId: productId,
         CustomerId: userId,
         Amount: totalPrice,
-        historyType: 'PURCHASE',
-        Description: `Purchase of product ID: ${productId}`,
+        HistoryType: 'PURCHASE',
+        Description: `Pembelian produk ID: ${productId}`,
       },
-      { history: t }
+      { transaction: t }
     );
 
-    // 5. Update user balance
+    // 5. Update saldo user
     const newBalance = currentBalance - totalPrice;
-    await user.balance.update({ Amount: newBalance }, { history: t });
+    await user.balance.update({ Amount: newBalance }, { transaction: t });
 
-    // Commit the history
+    // Commit transaksi database
     await t.commit();
 
     return h
       .response({
-        message: 'history successful',
-        historyId: newhistory.id,
+        message: 'History berhasil dibuat',
+        historyId: newHistory.id,
         newBalance: newBalance,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('history processing error:', error.message);
+    console.error('Error pemrosesan history:', error.message);
     return h
-      .response({ error: 'history failed. Please try again later.' })
+      .response({ error: 'History gagal. Silakan coba lagi nanti.' })
       .code(500);
   }
 };
 
-// READ - Get all history
-const getAllhistory = async (request, h) => {
+// READ - Dapatkan semua history
+const getAllHistory = async (request, h) => {
   try {
-    const history = await Transaction.findAll({
+    const histories = await Transaction.findAll({
       include: [
         {
           model: User,
@@ -102,28 +102,28 @@ const getAllhistory = async (request, h) => {
       ],
     });
 
-    return h.response(history).code(200);
+    return h.response(histories).code(200);
   } catch (error) {
-    console.error('Get all history error:', error.message);
+    console.error('Error mendapatkan semua history:', error.message);
     return h
       .response({
-        error: 'Failed to fetch history. Please try again later.',
+        error: 'Gagal mengambil history. Silakan coba lagi nanti.',
       })
       .code(500);
   }
 };
 
-// READ - Get history by ID
-const gethistoryById = async (request, h) => {
+// READ - Dapatkan history berdasarkan ID
+const getHistoryById = async (request, h) => {
   const { id } = request.params;
 
-  // Input validation
+  // Validasi input
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid history ID' }).code(400);
+    return h.response({ message: 'ID history tidak valid' }).code(400);
   }
 
   try {
-    const history = await history.findByPk(id, {
+    const history = await Transaction.findByPk(id, {
       include: [
         {
           model: User,
@@ -139,37 +139,35 @@ const gethistoryById = async (request, h) => {
     });
 
     if (!history) {
-      return h.response({ message: 'history not found' }).code(404);
+      return h.response({ message: 'History tidak ditemukan' }).code(404);
     }
 
     return h.response(history).code(200);
   } catch (error) {
-    console.error('Get history by ID error:', error.message);
+    console.error('Error mendapatkan history berdasarkan ID:', error.message);
     return h
       .response({
-        error: 'Failed to fetch history. Please try again later.',
+        error: 'Gagal mengambil history. Silakan coba lagi nanti.',
       })
       .code(500);
   }
 };
 
-// READ - Get history by user ID
-const gethistoryByUser = async (request, h) => {
+// READ - Dapatkan history berdasarkan ID user
+const getHistoryByUser = async (request, h) => {
   const { userId } = request.params;
 
-  // Input validation
   if (isNaN(userId)) {
-    return h.response({ message: 'Invalid user ID' }).code(400);
+    return h.response({ message: 'ID user tidak valid' }).code(400);
   }
 
   try {
-    // First check if user exists
     const user = await User.findByPk(userId);
     if (!user) {
-      return h.response({ message: 'User not found' }).code(404);
+      return h.response({ message: 'User tidak ditemukan' }).code(404);
     }
 
-    const history = await history.findAll({
+    const histories = await Transaction.findAll({
       where: { CustomerId: userId },
       include: [
         {
@@ -178,144 +176,145 @@ const gethistoryByUser = async (request, h) => {
           attributes: ['id', 'ProductName', 'Price', 'CategoryId'],
         },
       ],
-      order: [['historyDate', 'DESC']], // Order by date, newest first
+      order: [['TransactionDate', 'DESC']],
     });
 
-    return h.response(history).code(200);
+    return h.response(histories).code(200);
   } catch (error) {
-    console.error('Get history by user error:', error.message);
+    console.error('Error detail:', error); // Tampilkan seluruh error
     return h
       .response({
-        error: 'Failed to fetch user history. Please try again later.',
+        error: 'Gagal mengambil history user. Silakan coba lagi nanti.',
+        detail: error.message, // Tambahkan detail error di response
       })
       .code(500);
   }
 };
 
-// UPDATE - Update history details
-const updatehistory = async (request, h) => {
+// UPDATE - Update detail history
+const updateHistory = async (request, h) => {
   const { id } = request.params;
   const { description } = request.payload;
 
-  // Input validation
+  // Validasi input
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid history ID' }).code(400);
+    return h.response({ message: 'ID history tidak valid' }).code(400);
   }
 
   if (!description || description.trim() === '') {
-    return h.response({ message: 'Description cannot be empty' }).code(400);
+    return h.response({ message: 'Deskripsi tidak boleh kosong' }).code(400);
   }
 
-  const t = await sequelize.history();
+  const t = await sequelize.transaction();
 
   try {
-    const history = await history.findByPk(id, { history: t });
+    const history = await Transaction.findByPk(id, { transaction: t });
 
     if (!history) {
       await t.rollback();
-      return h.response({ message: 'history not found' }).code(404);
+      return h.response({ message: 'History tidak ditemukan' }).code(404);
     }
 
-    // Only allowing description updates in this example
-    await history.update({ Description: description }, { history: t });
+    // Hanya mengizinkan update deskripsi dalam contoh ini
+    await history.update({ Description: description }, { transaction: t });
 
     await t.commit();
 
     return h
       .response({
-        message: 'history updated successfully',
+        message: 'History berhasil diperbarui',
         history,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('Update history error:', error.message);
+    console.error('Error update history:', error.message);
     return h
       .response({
-        error: 'Failed to update history. Please try again later.',
+        error: 'Gagal memperbarui history. Silakan coba lagi nanti.',
       })
       .code(500);
   }
 };
 
-// DELETE - Cancel/delete a history
-const deletehistory = async (request, h) => {
+// DELETE - Batalkan/hapus history
+const deleteHistory = async (request, h) => {
   const { id } = request.params;
 
-  // Input validation
+  // Validasi input
   if (isNaN(id)) {
-    return h.response({ message: 'Invalid history ID' }).code(400);
+    return h.response({ message: 'ID history tidak valid' }).code(400);
   }
 
-  const t = await sequelize.history();
+  const t = await sequelize.transaction();
 
   try {
-    const history = await history.findByPk(id, {
-      history: t,
+    const history = await Transaction.findByPk(id, {
+      transaction: t,
     });
 
     if (!history) {
       await t.rollback();
-      return h.response({ message: 'history not found' }).code(404);
+      return h.response({ message: 'History tidak ditemukan' }).code(404);
     }
 
-    // Check if history is within refund time window (24 hours)
-    const historyTime = new Date(history.historyDate);
+    // Periksa apakah history masih dalam jendela waktu refund (24 jam)
+    const historyTime = new Date(history.TransactionDate);
     const currentTime = new Date();
     const diffHours = (currentTime - historyTime) / (1000 * 60 * 60);
 
     if (diffHours > 24) {
       await t.rollback();
       return h
-        .response({ message: 'history cannot be refunded after 24 hours' })
+        .response({ message: 'History tidak dapat direfund setelah 24 jam' })
         .code(400);
     }
 
-    // Get the user and balance
+    // Dapatkan user dan saldo
     const user = await User.findByPk(history.CustomerId, {
       include: [{ model: Balance, as: 'balance' }],
-      history: t,
+      transaction: t,
     });
 
     if (!user || !user.balance) {
       await t.rollback();
-      return h.response({ message: 'User or balance not found' }).code(404);
+      return h.response({ message: 'User atau saldo tidak ditemukan' }).code(404);
     }
 
-    // Refund the user
+    // Refund ke user
     const currentBalance = user.balance.Amount;
     const newBalance = currentBalance + history.Amount;
 
-    await user.balance.update({ Amount: newBalance }, { history: t });
+    await user.balance.update({ Amount: newBalance }, { transaction: t });
 
-    // Delete the history
-    await history.destroy({ history: t });
+    // Hapus history
+    await history.destroy({ transaction: t });
 
     await t.commit();
 
     return h
       .response({
-        message: 'history deleted and payment refunded',
+        message: 'History dihapus dan pembayaran direfund',
         refundAmount: history.Amount,
         newBalance,
       })
       .code(200);
   } catch (error) {
     await t.rollback();
-    console.error('Delete history error:', error.message);
+    console.error('Error hapus history:', error.message);
     return h
       .response({
-        error: 'Failed to delete history. Please try again later.',
+        error: 'Gagal menghapus history. Silakan coba lagi nanti.',
       })
       .code(500);
   }
 };
 
 module.exports = {
-  processhistory,
-  getAllhistory,
-  gethistoryById,
-  gethistoryByUser,
-  updatehistory,
-  deletehistory,
+  processHistory,
+  getAllHistory,
+  getHistoryById,
+  getHistoryByUser,
+  updateHistory,
+  deleteHistory,
 };

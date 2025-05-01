@@ -6,9 +6,9 @@ const historyRoutes = [
   {
     method: 'POST',
     path: '/history',
-    handler: historyController.processhistory,
+    handler: historyController.processHistory,
     options: {
-      auth: 'jwt', // Assuming you have a JWT authentication strategy
+      // auth: 'jwt', // Assuming you have a JWT authentication strategy
       validate: {
         payload: Joi.object({
           userId: Joi.number().integer().positive().required(),
@@ -23,7 +23,7 @@ const historyRoutes = [
   {
     method: 'GET',
     path: '/history',
-    handler: historyController.getAllhistory,
+    handler: historyController.getAllHistory,
     options: {
       // auth: 'jwt',
       // Add pagination options if needed
@@ -40,7 +40,7 @@ const historyRoutes = [
   {
     method: 'GET',
     path: '/history/{id}',
-    handler: historyController.gethistoryById,
+    handler: historyController.getHistoryById,
     options: {
       // auth: 'jwt',
       validate: {
@@ -54,10 +54,10 @@ const historyRoutes = [
   // READ - Get history by user
   {
     method: 'GET',
-    path: '/history/user/{id}',
-    handler: historyController.gethistoryByUser,
+    path: '/history/user/{userId}',
+    handler: historyController.getHistoryByUser,
     options: {
-      auth: 'jwt',
+      // auth: 'jwt',
       validate: {
         params: Joi.object({
           userId: Joi.number().integer().positive().required(),
@@ -70,9 +70,9 @@ const historyRoutes = [
   {
     method: 'PUT',
     path: '/history/{id}',
-    handler: historyController.updatehistory,
+    handler: historyController.updateHistory,
     options: {
-      auth: 'jwt',
+      // auth: 'jwt',
       validate: {
         params: Joi.object({
           id: Joi.number().integer().positive().required(),
@@ -88,9 +88,9 @@ const historyRoutes = [
   {
     method: 'DELETE',
     path: '/history/{id}',
-    handler: historyController.deletehistory,
+    handler: historyController.deleteHistory,
     options: {
-      auth: 'jwt',
+      // auth: 'jwt',
       validate: {
         params: Joi.object({
           id: Joi.number().integer().positive().required(),

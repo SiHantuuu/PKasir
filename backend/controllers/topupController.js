@@ -115,33 +115,31 @@ const getUserTransactionHistory = async (request, h) => {
   const offset = 0;
 
   try {
-    // Verify user exists first
-    const userExists = await User.findByPk(userId);
+    // Verify user exists first - make sure the model name matches your actual table
+    // If your model is defined differently than "User", adjust accordingly
+    const userExists = await sequelize.models.users.findByPk(userId);
     if (!userExists) {
       return h.response({ message: 'User not found' }).code(404);
     }
 
     const transactions = await Transaction.findAll({
-      where: { CustomerId: userId },
+      where: { CustomerId: userId }, // Make sure this field name matches your actual column name
       order: [['TransactionDate', 'DESC']],
       limit,
       offset,
-      // Include associated product information if needed
       include: [
         {
           model: sequelize.models.Product,
           as: 'product',
-          attributes: ['id', 'name'], // Adjust these attributes based on your Product model
+          attributes: ['id', 'name'],
         },
       ],
     });
 
-    return h.response(transactions).code(200);
+    return h.response({ transactions }).code(200);
   } catch (error) {
     console.error('Error fetching transaction history:', error);
-    return h
-      .response({ error: 'Failed to fetch transaction history' })
-      .code(500);
+    return h.response({ message: 'An error occurred while fetching transaction history' }).code(500);
   }
 };
 

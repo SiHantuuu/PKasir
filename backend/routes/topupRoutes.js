@@ -21,16 +21,16 @@ const topupRoutes = [
   //     tags: ["api", "user"],
   //   },
   // },
-  {
-    method: "GET",
-    path: "/history/{userId}",
-    handler: topupController.getUserTransactionHistory,
-    options: {
-      description: "Ambil history transaksi user",
-      notes: "Mengambil 5 transaksi terakhir dari user berdasarkan ID",
-      tags: ["api", "history"],
-    },
-  },
+  // {
+  //   method: "GET",
+  //   path: "/history/{id}",
+  //   handler: topupController.getUserTransactionHistory,
+  //   options: {
+  //     description: "Ambil history transaksi user",
+  //     notes: "Mengambil 5 transaksi terakhir dari user berdasarkan ID",
+  //     tags: ["api", "history"],
+  //   },
+  // },
   {
     method: 'POST',
     path: '/topup',

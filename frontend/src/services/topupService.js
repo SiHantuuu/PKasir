@@ -1,4 +1,5 @@
 // src/services/topupService.js
+import { historyService } from './historyService';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -41,11 +42,8 @@ export const topupService = {
 
   getUserTransactionHistory: async (userId) => {
     try {
-      const response = await fetch(`${API_URL}/history/${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch transaction history');
-      }
-      return await response.json();
+      // Using historyService to get transaction history
+      return await historyService.getHistoryByUser(userId);
     } catch (error) {
       console.error(
         `Error fetching transaction history for user ${userId}:`,
@@ -71,6 +69,24 @@ export const topupService = {
       const result = await response.json();
       console.log('[DEBUG] Top up result:', result);
       console.log('[DEBUG] New balance after top up:', result.newBalance);
+      
+      // Record the top-up transaction in history
+      if (topupData.userId && topupData.amount) {
+        try {
+          // Using null for productId since this is a top-up, not a purchase
+          await historyService.processHistory(
+            topupData.userId,
+            topupData.amount,
+            null
+          );
+          console.log('[DEBUG] Top-up transaction recorded in history');
+        } catch (historyError) {
+          console.error('Error recording top-up in history:', historyError);
+          // We don't throw this error to avoid affecting the top-up flow
+          // The top-up was successful even if history recording failed
+        }
+      }
+      
       return result;
     } catch (error) {
       console.error('Error topping up balance:', error);
