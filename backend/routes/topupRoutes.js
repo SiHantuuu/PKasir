@@ -42,16 +42,16 @@ const topupRoutes = [
     },
   },
   // New route to get user by NFC ID as URL parameter
-  {
-    method: 'GET',
-    path: '/user/nfc/{nfcId}',
-    handler: topupController.getUserByNFC,
-    options: {
-      description: 'Ambil user berdasarkan NFC ID',
-      notes: 'Mengembalikan informasi user yang sesuai dengan NFC ID',
-      tags: ['api', 'user', 'nfc'],
-    },
-  },
+  // {
+  //   method: 'GET',
+  //   path: '/user/nfc/{nfcId}',
+  //   handler: topupController.getUserByNFC,
+  //   options: {
+  //     description: 'Ambil user berdasarkan NFC ID',
+  //     notes: 'Mengembalikan informasi user yang sesuai dengan NFC ID',
+  //     tags: ['api', 'user', 'nfc'],
+  //   },
+  // },
   // New route to verify user by NFC ID in the request body
   {
     method: 'POST',

@@ -12,18 +12,20 @@ interface ProductCardProps {
     image: string;
     category?: string;
   }
-  
 }
 
-
 export default function ProductCard({ product }: ProductCardProps) {
-  // Format price safely with a null check
   const formatPrice = (price: number | undefined) => {
-    return typeof price === 'number' ? `$${price.toFixed(2)}` : 'Price unavailable'
+    if (typeof price !== 'number') return 'Harga tidak tersedia';
+    
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
   }
 
   return (
-    
     <Card className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg">
       <CardContent className="p-0">
         <div className="relative h-48 w-full overflow-hidden">
@@ -35,7 +37,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           />
         </div>
         <div className="p-4">
-          <h3 className="font-semibold text-lg truncate">{product.name || "Unnamed Product"}</h3>
+          <h3 className="font-semibold text-lg truncate">{product.name || "Produk Tanpa Nama"}</h3>
           {product.category && (
             <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
           )}
@@ -46,7 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               whileTap={{ scale: 0.95 }}
               className="text-xs bg-primary/10 text-primary rounded-full px-3 py-1 font-medium"
             >
-              View Details
+              Lihat Detail
             </motion.button>
           </div>
         </div>

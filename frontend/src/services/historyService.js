@@ -30,7 +30,11 @@ export const historyService = {
   // CREATE - Process a new history (purchase)
   processHistory: async (userId, totalPrice, productId) => {
     try {
-      const response = await api.post('/history', { userId, totalPrice, productId });
+      const response = await api.post('/history', { 
+        userId, 
+        totalPrice, 
+        productId 
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to process history' };
@@ -67,7 +71,7 @@ export const historyService = {
     }
   },
 
-  // UPDATE - Update history details
+  // UPDATE - Update history details (only description can be updated)
   updateHistory: async (id, description) => {
     try {
       const response = await api.put(`/history/${id}`, { description });
@@ -77,7 +81,7 @@ export const historyService = {
     }
   },
 
-  // DELETE - Cancel/delete a history
+  // DELETE - Cancel/delete a history (refund will be processed if within 24 hours)
   deleteHistory: async (id) => {
     try {
       const response = await api.delete(`/history/${id}`);
@@ -86,6 +90,21 @@ export const historyService = {
       throw error.response?.data || { message: 'Failed to delete history' };
     }
   },
+};
+
+// Add better error handling to display specific error messages from the backend
+export const handleApiError = (error) => {
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    // that falls out of the range of 2xx
+    return error.response.data.message || error.response.data.error || 'An error occurred';
+  } else if (error.request) {
+    // The request was made but no response was received
+    return 'No response from server. Please check your connection.';
+  } else {
+    // Something happened in setting up the request that triggered an Error
+    return error.message || 'An unexpected error occurred';
+  }
 };
 
 // Also export as default for backward compatibility

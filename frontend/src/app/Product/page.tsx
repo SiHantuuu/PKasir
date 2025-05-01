@@ -21,6 +21,7 @@ import ProductAnalytics from "@/components/product-analytics"
 import { useScroll, useSpring } from "framer-motion"
 import { categoryService } from "@/services/categoryService"
 import { productService } from "@/services/productService"
+import { formatRupiah, parseRupiah } from "@/utils/formatCurrency"
 
 // Define proper types for category and product
 interface Category {
@@ -53,33 +54,86 @@ const ProgressBar = () => {
   return <motion.div className="fixed top-0 left-0 right-0 h-1 bg-primary z-50 origin-left" style={{ scaleX }} />
 }
 
-function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClose: () => void; categories: string[] }) {
+function NewItemDialog({ isOpen, onClose, categories, onProductAdded }) {
   const [name, setName] = useState("")
-  const [price, setPrice] = useState("")
+  const [price, setPrice] = useState("Rp ")
   const [category, setCategory] = useState("")
   const [image, setImage] = useState("/placeholder.svg")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const filteredCategories = categories.filter(cat => cat !== "All")
 
   useEffect(() => {
     if (!isOpen) {
       setName("")
-      setPrice("")
+      setPrice("Rp ")
       setCategory("")
       setImage("/placeholder.svg")
     }
   }, [isOpen])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("New Item:", { name, price: Number.parseFloat(price), category, image })
-    setName("")
-    setPrice("")
-    setCategory("")
-    setImage("/placeholder.svg")
-    onClose()
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    // Hapus semua karakter non-digit
+    const numericValue = input.replace(/\D/g, '');
+    
+    if (numericValue === '') {
+      setPrice('Rp ');
+      return;
+    }
+    
+    const numberValue = parseInt(numericValue);
+    setPrice(formatRupiah(numberValue));
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!name.trim() || !price || price === 'Rp ' || !category) return
+    
+    try {
+      setIsLoading(true)
+      
+      // Find the category ID for the selected category name
+      const fetchedCategories = await categoryService.getAllCategories()
+      const categoryObj = fetchedCategories.find((cat) => cat.name === category)
+      
+      if (!categoryObj) {
+        console.error("Category not found")
+        return
+      }
+      
+      // Parse price from Rupiah format to number
+      const numericPrice = parseRupiah(price)
+      
+      // Create the new product
+      const newProduct = await productService.createProduct({
+        productName: name,
+        price: numericPrice,
+        categoryId: categoryObj.id,
+        // Note: Image handling will require additional backend support
+      })
+      
+      console.log("New product created:", newProduct)
+      
+      // Call the callback function to refresh products
+      if (onProductAdded) {
+        onProductAdded()
+      }
+      
+      // Reset form and close dialog
+      setName("")
+      setPrice("Rp ")
+      setCategory("")
+      setImage("/placeholder.svg")
+      onClose()
+    } catch (error) {
+      console.error("Failed to create product:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleImageChange = (e) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -122,6 +176,7 @@ function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClo
                 placeholder="Enter product name"
                 required
                 className="col-span-3"
+                disabled={isLoading}
               />
             </motion.div>
             <motion.div className="grid grid-cols-4 items-center gap-4">
@@ -130,25 +185,24 @@ function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClo
               </Label>
               <Input
                 id="new-price"
-                type="number"
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Enter product price"
-                step="0.01"
+                onChange={handlePriceChange}
+                placeholder="Rp 0"
                 required
                 className="col-span-3"
+                disabled={isLoading}
               />
             </motion.div>
             <motion.div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="new-category" className="text-right">
                 Category
               </Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={setCategory} disabled={isLoading}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
+                  {filteredCategories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
                     </SelectItem>
@@ -175,8 +229,14 @@ function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClo
                   className="hidden"
                   onChange={handleImageChange}
                   accept="image/*"
+                  disabled={isLoading}
                 />
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="w-full"
+                  disabled={isLoading}
+                >
                   <Upload className="mr-2 h-4 w-4" /> Choose Image
                 </Button>
               </div>
@@ -184,7 +244,12 @@ function NewItemDialog({ isOpen, onClose, categories }: { isOpen: boolean; onClo
           </motion.div>
           <motion.div className="flex justify-end">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button onClick={handleSubmit}>Add Product</Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isLoading || !name.trim() || !price || price === "Rp " || !category}
+              >
+                {isLoading ? "Adding..." : "Add Product"}
+              </Button>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -214,6 +279,38 @@ export default function Page() {
   // Sample product data
   const [products, setProducts] = useState<Product[]>([])
 
+  // Function to refresh products
+  const refreshProducts = async () => {
+    setIsLoading(true)
+    try {
+      const fetchedProducts = await productService.getAllProducts()
+      // Normalize property names
+      const normalizedProducts = fetchedProducts.map(product => ({
+        id: product.id,
+        productName: product.ProductName || product.productName,
+        name: product.ProductName || product.productName, // Use ProductName as name
+        price: product.Price || product.price,
+        categoryId: product.CategoryId || product.categoryId,
+        categoryName: product.Category?.name || '', 
+        category: product.Category?.name || 'Uncategorized',
+        image: product.image || "/placeholder.svg"
+      }));
+
+      setProducts(normalizedProducts)
+      
+      // Also update filtered products if appropriate
+      if (!selectedCategory || selectedCategory === "All") {
+        setFilteredProducts(normalizedProducts)
+      } else {
+        filterProductsByCategory(selectedCategory, normalizedProducts)
+      }
+    } catch (error) {
+      console.error("Failed to refresh products:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Fetch categories on component mount
   useEffect(() => {
     const fetchCategories = async () => {
@@ -232,35 +329,41 @@ export default function Page() {
     fetchCategories()
   }, [])
 
+  // Fetch products on component mount
   useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true)
-      try {
-        const fetchedProducts = await productService.getAllProducts()
+    refreshProducts()
+  }, [])
+
+  const filterProductsByCategory = async (category: string, productsList = products) => {
+    if (category === "All") {
+      setFilteredProducts(productsList)
+      return
+    }
+    
+    try {
+      const fetchedCategories = await categoryService.getAllCategories()
+      const categoryObj = fetchedCategories.find((cat: Category) => cat.name === category)
+      
+      if (categoryObj) {
+        const productsInCategory = await productService.getProductsByCategory(categoryObj.id)
         // Normalize property names
-        const normalizedProducts = fetchedProducts.map(product => ({
+        const normalizedProducts = productsInCategory.map(product => ({
           id: product.id,
-          productName: product.ProductName,
-          name: product.ProductName, // Gunakan ProductName sebagai name
-          price: product.Price,
-          categoryId: product.CategoryId,
-          categoryName: product.Category?.name || '', // Akses nama kategori dari objek Category
-          category: product.Category?.name || 'Uncategorized', // Untuk kompatibilitas
+          productName: product.ProductName || product.productName,
+          name: product.ProductName || product.productName,
+          price: product.Price || product.price,
+          categoryId: product.CategoryId || product.categoryId,
+          categoryName: product.Category?.name || '', 
+          category: product.Category?.name || 'Uncategorized',
           image: product.image || "/placeholder.svg"
         }));
-
-        setProducts(normalizedProducts)
+        
         setFilteredProducts(normalizedProducts)
-      } catch (error) {
-        console.error("Failed to fetch products:", error)
-      } finally {
-        setIsLoading(false)
-        setIsPageLoaded(true)
       }
+    } catch (error) {
+      console.error(`Failed to filter products by category ${category}:`, error)
     }
-  
-    fetchProducts()
-  }, [])
+  }
 
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) return
@@ -284,26 +387,62 @@ export default function Page() {
     const filterProducts = async () => {
       setIsLoading(true)
       try {
-        let filteredResults = []
-        
+        // Handle category filtering
         if (selectedCategory === undefined || selectedCategory === "All") {
           // Get all products if no category is selected
-          filteredResults = await productService.getAllProducts()
+          if (!searchQuery) {
+            const allProducts = await productService.getAllProducts()
+            // Normalize property names
+            const normalizedProducts = allProducts.map(product => ({
+              id: product.id,
+              productName: product.ProductName || product.productName,
+              name: product.ProductName || product.productName,
+              price: product.Price || product.price,
+              categoryId: product.CategoryId || product.categoryId,
+              categoryName: product.Category?.name || '', 
+              category: product.Category?.name || 'Uncategorized',
+              image: product.image || "/placeholder.svg"
+            }));
+            setFilteredProducts(normalizedProducts)
+          }
         } else {
           // Find category ID for the selected category name
           const fetchedCategories = await categoryService.getAllCategories()
           const categoryObj = fetchedCategories.find((cat: Category) => cat.name === selectedCategory)
           if (categoryObj) {
-            filteredResults = await productService.getProductsByCategory(categoryObj.id)
+            const productsInCategory = await productService.getProductsByCategory(categoryObj.id)
+            // Normalize property names
+            const normalizedProducts = productsInCategory.map(product => ({
+              id: product.id,
+              productName: product.ProductName || product.productName,
+              name: product.ProductName || product.productName,
+              price: product.Price || product.price,
+              categoryId: product.CategoryId || product.categoryId,
+              categoryName: product.Category?.name || '', 
+              category: product.Category?.name || 'Uncategorized',
+              image: product.image || "/placeholder.svg"
+            }));
+            setFilteredProducts(normalizedProducts)
           }
         }
         
         // Apply search filter if there's a search query
         if (searchQuery) {
-          filteredResults = await productService.searchProductsByName(searchQuery)
+          const searchResults = await productService.searchProductsByName(searchQuery)
+          // Normalize property names
+          const normalizedResults = searchResults.map(product => ({
+            id: product.id,
+            productName: product.ProductName || product.productName,
+            name: product.ProductName || product.productName,
+            price: product.Price || product.price,
+            categoryId: product.CategoryId || product.categoryId,
+            categoryName: product.Category?.name || '', 
+            category: product.Category?.name || 'Uncategorized',
+            image: product.image || "/placeholder.svg"
+          }));
+          setFilteredProducts(normalizedResults)
         }
         
-        setFilteredProducts(filteredResults)
         setCurrentPage(1)
       } catch (error) {
         console.error("Failed to filter products:", error)
@@ -330,43 +469,69 @@ export default function Page() {
 
   const handleDeleteProduct = async (productId: string) => {
     try {
-      await productService.deleteProduct(productId)
+      setIsLoading(true);
+      // Tambahkan konfirmasi sebelum delete
+      const confirmDelete = confirm("Are you sure you want to delete this product?");
+      if (!confirmDelete) return;
+      
+      await productService.deleteProduct(productId);
       
       // Refresh products after deletion
-      const updatedProducts = await productService.getAllProducts()
-      setProducts(updatedProducts)
-      setFilteredProducts(updatedProducts)
+      await refreshProducts();
       
-      setIsEditDialogOpen(false)
+      setIsEditDialogOpen(false);
     } catch (error) {
-      console.error(`Failed to delete product ${productId}:`, error)
+      console.error(`Failed to delete product ${productId}:`, error);
+      // Tambahkan feedback ke user
+      alert(`Failed to delete product: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
+  }
+  
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const numericValue = input.replace(/\D/g, '');
+    
+    if (numericValue === '') {
+      setSelectedProduct({ ...selectedProduct, price: 0 });
+      return;
+    }
+    
+    const numberValue = parseInt(numericValue);
+    setSelectedProduct({ ...selectedProduct, price: numberValue });
   }
 
   const handleSaveProduct = async () => {
     if (!selectedProduct) return
     
     try {
+      setIsLoading(true)
       // Find the category ID for the selected category name
       const fetchedCategories = await categoryService.getAllCategories()
       const categoryObj = fetchedCategories.find((cat: Category) => cat.name === selectedProduct.category)
-      if (!categoryObj) return
+      if (!categoryObj) {
+        console.error("Category not found")
+        return
+      }
       
       await productService.updateProduct(selectedProduct.id, {
         productName: selectedProduct.name || selectedProduct.productName,
-        price: selectedProduct.price,
+        price: typeof selectedProduct.price === 'string' 
+          ? parseRupiah(selectedProduct.price) 
+          : selectedProduct.price,
         categoryId: categoryObj.id,
-        // Note: Image handling will require additional work
+        // Note: Image handling will require additional backend support
       })
       
       // Refresh products after update
-      const updatedProducts = await productService.getAllProducts()
-      setProducts(updatedProducts)
-      setFilteredProducts(updatedProducts)
+      await refreshProducts()
       
       setIsEditDialogOpen(false)
     } catch (error) {
       console.error(`Failed to update product ${selectedProduct.id}:`, error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -453,7 +618,6 @@ export default function Page() {
 
     return pageNumbers
   }
-  console.log('Products to render:', paginatedProducts);
 
   return (
     <SidebarProvider>
@@ -494,6 +658,7 @@ export default function Page() {
                   className="pl-8 w-[200px] bg-white/50 dark:bg-gray-700/50 border-0 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={isLoading}
                 />
               </motion.div>
               <motion.div
@@ -734,13 +899,27 @@ export default function Page() {
                   </Label>
                   <Input
                     id="price"
-                    value={selectedProduct.price}
+                    value={selectedProduct ? formatRupiah(selectedProduct.price) : "Rp 0"}
                     onChange={(e) => {
-                      const value = e.target.value
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        price: value === "" ? 0 : Number.parseFloat(value) || 0,
-                      })
+                      const value = e.target.value;
+                      // Allow backspace to delete numbers
+                      if (value === "Rp " || value === "") {
+                        setSelectedProduct({ ...selectedProduct, price: 0 });
+                        return;
+                      }
+                      
+                      // Remove all non-digit characters
+                      const numericValue = value.replace(/\D/g, '');
+                      
+                      // If no numbers left, set price to 0
+                      if (numericValue === '') {
+                        setSelectedProduct({ ...selectedProduct, price: 0 });
+                        return;
+                      }
+                      
+                      // Update the price with parsed number
+                      const numberValue = parseInt(numericValue, 10);
+                      setSelectedProduct({ ...selectedProduct, price: numberValue });
                     }}
                     className="col-span-3"
                   />

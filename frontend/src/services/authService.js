@@ -75,6 +75,8 @@ export const authService = {
    */
   loginSiswa: async (credentials) => {
     try {
+      console.log("Making login request with:", credentials);
+      
       const response = await fetch(`${API_URL}/login/murid`, {
         method: 'POST',
         headers: {
@@ -82,26 +84,26 @@ export const authService = {
         },
         body: JSON.stringify(credentials),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Student login failed');
-      }
-
+  
       const data = await response.json();
-
+      console.log("Raw server response:", data);
+  
+      if (!response.ok) {
+        throw new Error(data.message || 'Student login failed');
+      }
+  
       // Store token in localStorage
       if (data.token) {
         localStorage.setItem('authToken', data.token);
+        return data;
+      } else {
+        throw new Error('No authentication token received');
       }
-
-      return data;
     } catch (error) {
       console.error('Error logging in as student:', error);
       throw error;
     }
   },
-
   /**
    * Get user by NFC ID
    * @param {string} NFCId - NFC identifier
@@ -109,19 +111,33 @@ export const authService = {
    */
   getUserByNFC: async (NFCId) => {
     try {
+      console.log("Fetching user with NFC ID:", NFCId);
+      
       const response = await fetch(`${API_URL}/user/nfc/${NFCId}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          // You might need to add authorization here
+          // Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
-
+  
+      const data = await response.json();
+      console.log("getUserByNFC response:", data);
+  
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch user by NFC');
+        throw new Error(data.message || 'Failed to fetch user by NFC');
       }
-
-      return await response.json();
+  
+      // Map the response to the expected format
+      // Backend returns Nama and Amount but our app expects NFCId, Nama, and Saldo
+      const mappedData = {
+        NFCId: NFCId, // Use the NFCId we sent in the request
+        Nama: data.Nama,
+        Saldo: data.Amount // Rename 'Amount' to 'Saldo'
+      };
+      
+      console.log("Mapped user data:", mappedData);
+      return mappedData;
     } catch (error) {
       console.error('Error fetching user by NFC:', error);
       throw error;

@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       TransactionType: {
         type: DataTypes.STRING,
-        allowNull: false,
+        // allowNull: yes,
       },
       TransactionDate: {
         type: DataTypes.DATE,
