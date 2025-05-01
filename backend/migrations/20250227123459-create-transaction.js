@@ -19,7 +19,7 @@ module.exports = {
       },
       TransactionType: {
         type: Sequelize.STRING,
-        allowNull: false,
+        // allowNull: false,
       },
       Description: {
         type: Sequelize.STRING,

@@ -11,7 +11,7 @@ const historyRoutes = [
       // auth: 'jwt', // Assuming you have a JWT authentication strategy
       validate: {
         payload: Joi.object({
-          userId: Joi.number().integer().positive().required(),
+          NFCId: Joi.string().required(),
           totalPrice: Joi.number().integer().positive().required(),
           productId: Joi.number().integer().positive().required(),
         }),

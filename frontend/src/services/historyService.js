@@ -30,10 +30,13 @@ export const historyService = {
   // CREATE - Process a new history (purchase)
   processHistory: async (userId, totalPrice, productId) => {
     try {
-      const response = await api.post('/history', { 
-        userId, 
-        totalPrice, 
-        productId 
+      // Convert productId to number to avoid sending it as a string with quotes
+      const numericProductId = Number(productId);
+
+      const response = await api.post('/history', {
+        NFCId: userId,
+        totalPrice,
+        productId: numericProductId, // Send as a number, not a string
       });
       return response.data;
     } catch (error) {
@@ -90,21 +93,25 @@ export const historyService = {
       throw error.response?.data || { message: 'Failed to delete history' };
     }
   },
-};
 
-// Add better error handling to display specific error messages from the backend
-export const handleApiError = (error) => {
-  if (error.response) {
-    // The request was made and the server responded with a status code
-    // that falls out of the range of 2xx
-    return error.response.data.message || error.response.data.error || 'An error occurred';
-  } else if (error.request) {
-    // The request was made but no response was received
-    return 'No response from server. Please check your connection.';
-  } else {
-    // Something happened in setting up the request that triggered an Error
-    return error.message || 'An unexpected error occurred';
-  }
+  // Helper function to handle API errors
+  handleApiError: (error) => {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      return (
+        error.response.data.message ||
+        error.response.data.error ||
+        'An error occurred'
+      );
+    } else if (error.request) {
+      // The request was made but no response was received
+      return 'No response from server. Please check your connection.';
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      return error.message || 'An unexpected error occurred';
+    }
+  },
 };
 
 // Also export as default for backward compatibility
