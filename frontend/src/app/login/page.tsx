@@ -1,7 +1,6 @@
 'use client';
 
 import type React from 'react';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogIn, User, Lock, AlertCircle } from 'lucide-react';
 import { NotificationDialog } from '@/components/notification-dialog';
+import { authService } from '@/services/authService';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -31,30 +31,39 @@ export default function LoginPage() {
     status: 'success',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Here you would typically validate the credentials against a backend
-    // For this example, we'll use a simple check
-    if (username === 'admin' && password === 'password') {
+    try {
+      // Call the authService loginAdmin function
+      const credentials = {
+        Nama: username,
+        Password: password,
+      };
+
+      const response = await authService.loginAdmin(credentials);
+
       setNotification({
         isOpen: true,
         title: 'Login Successful',
         description: 'You will be redirected to the dashboard shortly.',
         status: 'success',
       });
-      login(username);
+
+      // Pass the username and token to the auth context
+      login(username, response.token);
+
       setTimeout(() => {
         router.push('/');
-      }, 2000); // Redirect after 2 seconds
-    } else {
-      setError('Invalid username or password');
+      }, 2000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
       setNotification({
         isOpen: true,
         title: 'Login Failed',
-        description:
-          'The username or password you entered is incorrect. Please try again.',
+        description: errorMessage,
         status: 'error',
       });
     }

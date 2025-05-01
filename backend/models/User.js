@@ -23,8 +23,15 @@ module.exports = (sequelize, DataTypes) => {
   }
   User.init(
     {
-      Nama: DataTypes.STRING,
-      NFCId: DataTypes.STRING,
+      Nama: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: false,
+      },
+      NFCId: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
       Pin: DataTypes.STRING,
       Password: DataTypes.STRING,
       role: DataTypes.STRING,
