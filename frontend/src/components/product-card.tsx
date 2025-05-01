@@ -6,48 +6,51 @@ import { Card, CardContent } from "@/components/ui/card"
 
 interface ProductCardProps {
   product: {
-    id: number
-    name: string
-    price: number
-    image: string
-    category: string
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    category?: string;
   }
+  
 }
+
 
 export default function ProductCard({ product }: ProductCardProps) {
+  // Format price safely with a null check
+  const formatPrice = (price: number | undefined) => {
+    return typeof price === 'number' ? `$${price.toFixed(2)}` : 'Price unavailable'
+  }
+
   return (
-    <motion.div
-      whileHover={{
-        y: -5,
-        scale: 1.03, // Added scale for zoom effect
-      }}
-      transition={{
-        type: "tween",
-        ease: "easeInOut",
-        duration: 0.3,
-      }}
-    >
-      <Card className="overflow-hidden cursor-pointer">
-        <CardContent className="p-0">
-          <div className="relative h-48">
-            <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
-            <motion.div
-              className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+    
+    <Card className="overflow-hidden bg-white dark:bg-gray-800 rounded-lg">
+      <CardContent className="p-0">
+        <div className="relative h-48 w-full overflow-hidden">
+          <Image
+            src={product.image || "/placeholder.svg"}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-300 hover:scale-105"
+          />
+        </div>
+        <div className="p-4">
+          <h3 className="font-semibold text-lg truncate">{product.name || "Unnamed Product"}</h3>
+          {product.category && (
+            <p className="text-sm text-muted-foreground mb-2">{product.category}</p>
+          )}
+          <div className="flex items-center justify-between mt-2">
+            <p className="font-bold text-primary">{formatPrice(product.price)}</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="text-xs bg-primary/10 text-primary rounded-full px-3 py-1 font-medium"
             >
-              <p className="text-white font-semibold text-sm">View Details</p>
-            </motion.div>
+              View Details
+            </motion.button>
           </div>
-          <div className="p-4">
-            <h3 className="font-semibold">{product.name}</h3>
-            <p className="text-sm text-gray-500">{product.category}</p>
-            <p className="mt-2 font-bold">${product.price.toFixed(2)}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
-

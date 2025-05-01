@@ -116,6 +116,7 @@ const getProductByName = async (request, h) => {
     console.error(error);
     return h.response({ error: 'Failed to fetch products by name' }).code(500);
   }
+  
 };
 
 module.exports = {

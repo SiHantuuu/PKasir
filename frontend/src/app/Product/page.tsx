@@ -20,6 +20,25 @@ import Image from "next/image"
 import ProductAnalytics from "@/components/product-analytics"
 import { useScroll, useSpring } from "framer-motion"
 import { categoryService } from "@/services/categoryService"
+import { productService } from "@/services/productService"
+
+// Define proper types for category and product
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Product {
+  id: string;
+  productName: string;
+  name?: string;
+  price: number;
+  imageUrl?: string;
+  image?: string;
+  categoryId?: string;
+  categoryName?: string;
+  category?: string;
+}
 
 const ITEMS_PER_PAGE = 8
 
@@ -180,10 +199,10 @@ export default function Page() {
   const [newCategory, setNewCategory] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredProducts, setFilteredProducts] = useState<any[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [isPageLoaded, setIsPageLoaded] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pageDirection, setPageDirection] = useState(0)
@@ -193,26 +212,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false)
 
   // Sample product data
-  const products = [
-    { id: 1, name: "Litos", price: 19.99, image: "/images/litos.png", category: "Electronics" },
-    { id: 2, name: "Floridina", price: 19.99, image: "/images/floridina.png", category: "Clothing" },
-    { id: 3, name: "Cimory UHT Fresh Milk", price: 19.99, image: "/images/cimory_milk.png", category: "Home" },
-    { id: 4, name: "Gopek", price: 19.99, image: "/images/gopek.png", category: "Electronics" },
-    { id: 5, name: "Product 5", price: 59.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 6, name: "Product 6", price: 69.99, image: "/placeholder.svg", category: "Home" },
-    { id: 7, name: "Product 7", price: 79.99, image: "/placeholder.svg", category: "Electronics" },
-    { id: 8, name: "Product 8", price: 89.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 9, name: "Product 9", price: 99.99, image: "/placeholder.svg", category: "Home" },
-    { id: 10, name: "Product 10", price: 109.99, image: "/placeholder.svg", category: "Electronics" },
-    { id: 11, name: "Product 11", price: 119.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 12, name: "Product 12", price: 129.99, image: "/placeholder.svg", category: "Home" },
-    { id: 13, name: "Product 13", price: 139.99, image: "/placeholder.svg", category: "Electronics" },
-    { id: 14, name: "Product 14", price: 149.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 15, name: "Product 15", price: 159.99, image: "/placeholder.svg", category: "Home" },
-    { id: 16, name: "Product 16", price: 169.99, image: "/placeholder.svg", category: "Electronics" },
-    { id: 17, name: "Product 17", price: 179.99, image: "/placeholder.svg", category: "Clothing" },
-    { id: 18, name: "Product 18", price: 189.99, image: "/placeholder.svg", category: "Home" },
-  ]
+  const [products, setProducts] = useState<Product[]>([])
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -220,7 +220,7 @@ export default function Page() {
       setIsLoading(true)
       try {
         const fetchedCategories = await categoryService.getAllCategories()
-        setCategories(["All", ...fetchedCategories.map((cat: any) => cat.name)])
+        setCategories(["All", ...fetchedCategories.map((cat: Category) => cat.name)])
       } catch (error) {
         console.error("Failed to fetch categories:", error)
       } finally {
@@ -232,6 +232,36 @@ export default function Page() {
     fetchCategories()
   }, [])
 
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true)
+      try {
+        const fetchedProducts = await productService.getAllProducts()
+        // Normalize property names
+        const normalizedProducts = fetchedProducts.map(product => ({
+          id: product.id,
+          productName: product.ProductName,
+          name: product.ProductName, // Gunakan ProductName sebagai name
+          price: product.Price,
+          categoryId: product.CategoryId,
+          categoryName: product.Category?.name || '', // Akses nama kategori dari objek Category
+          category: product.Category?.name || 'Uncategorized', // Untuk kompatibilitas
+          image: product.image || "/placeholder.svg"
+        }));
+
+        setProducts(normalizedProducts)
+        setFilteredProducts(normalizedProducts)
+      } catch (error) {
+        console.error("Failed to fetch products:", error)
+      } finally {
+        setIsLoading(false)
+        setIsPageLoaded(true)
+      }
+    }
+  
+    fetchProducts()
+  }, [])
+
   const handleCreateCategory = async () => {
     if (!newCategory.trim()) return
     
@@ -240,7 +270,7 @@ export default function Page() {
       await categoryService.createCategory({ name: newCategory })
       // Refresh categories
       const fetchedCategories = await categoryService.getAllCategories()
-      setCategories(["All", ...fetchedCategories.map((cat: any) => cat.name)])
+      setCategories(["All", ...fetchedCategories.map((cat: Category) => cat.name)])
       setNewCategory("")
       setIsDialogOpen(false)
     } catch (error) {
@@ -251,15 +281,39 @@ export default function Page() {
   }
 
   useEffect(() => {
-    const filtered = products.filter((product) => {
-      const matchesCategory =
-        selectedCategory === undefined || selectedCategory === "All" || product.category === selectedCategory
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesCategory && matchesSearch
-    })
-    setFilteredProducts(filtered)
-    setCurrentPage(1)
-  }, [selectedCategory, searchQuery, categories])
+    const filterProducts = async () => {
+      setIsLoading(true)
+      try {
+        let filteredResults = []
+        
+        if (selectedCategory === undefined || selectedCategory === "All") {
+          // Get all products if no category is selected
+          filteredResults = await productService.getAllProducts()
+        } else {
+          // Find category ID for the selected category name
+          const fetchedCategories = await categoryService.getAllCategories()
+          const categoryObj = fetchedCategories.find((cat: Category) => cat.name === selectedCategory)
+          if (categoryObj) {
+            filteredResults = await productService.getProductsByCategory(categoryObj.id)
+          }
+        }
+        
+        // Apply search filter if there's a search query
+        if (searchQuery) {
+          filteredResults = await productService.searchProductsByName(searchQuery)
+        }
+        
+        setFilteredProducts(filteredResults)
+        setCurrentPage(1)
+      } catch (error) {
+        console.error("Failed to filter products:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    filterProducts()
+  }, [selectedCategory, searchQuery])
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
@@ -269,14 +323,51 @@ export default function Page() {
     setCurrentPage(page)
   }
 
-  const handleProductClick = (product: any) => {
+  const handleProductClick = (product: Product) => {
     setSelectedProduct(product)
     setIsEditDialogOpen(true)
   }
 
-  const handleDeleteProduct = (productId: number) => {
-    console.log(`Delete product ${productId}`)
-    setIsEditDialogOpen(false)
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await productService.deleteProduct(productId)
+      
+      // Refresh products after deletion
+      const updatedProducts = await productService.getAllProducts()
+      setProducts(updatedProducts)
+      setFilteredProducts(updatedProducts)
+      
+      setIsEditDialogOpen(false)
+    } catch (error) {
+      console.error(`Failed to delete product ${productId}:`, error)
+    }
+  }
+
+  const handleSaveProduct = async () => {
+    if (!selectedProduct) return
+    
+    try {
+      // Find the category ID for the selected category name
+      const fetchedCategories = await categoryService.getAllCategories()
+      const categoryObj = fetchedCategories.find((cat: Category) => cat.name === selectedProduct.category)
+      if (!categoryObj) return
+      
+      await productService.updateProduct(selectedProduct.id, {
+        productName: selectedProduct.name || selectedProduct.productName,
+        price: selectedProduct.price,
+        categoryId: categoryObj.id,
+        // Note: Image handling will require additional work
+      })
+      
+      // Refresh products after update
+      const updatedProducts = await productService.getAllProducts()
+      setProducts(updatedProducts)
+      setFilteredProducts(updatedProducts)
+      
+      setIsEditDialogOpen(false)
+    } catch (error) {
+      console.error(`Failed to update product ${selectedProduct.id}:`, error)
+    }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,6 +453,7 @@ export default function Page() {
 
     return pageNumbers
   }
+  console.log('Products to render:', paginatedProducts);
 
   return (
     <SidebarProvider>
@@ -536,21 +628,29 @@ export default function Page() {
                   transition={{ duration: 0.3 }}
                   className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
                 >
-                  {paginatedProducts.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleProductClick(product)}
-                      className="shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                      <ProductCard product={product} />
-                    </motion.div>
-                  ))}
+               {paginatedProducts.map((product, index) => (
+  <motion.div
+    key={product.id}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
+    transition={{ duration: 0.3, delay: index * 0.05 }}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => handleProductClick(product)}
+    className="shadow-lg hover:shadow-xl transition-all duration-300"
+  >
+ <ProductCard 
+      product={{
+        id: product.id,
+        name: product.ProductName || product.name, // Prioritaskan ProductName
+        price: product.Price || product.price,
+        image: product.image || "/placeholder.svg",
+        category: product.Category?.name || product.categoryName || product.category || "Uncategorized"
+      }} 
+    />
+  </motion.div>
+))}
                 </motion.div>
               </AnimatePresence>
             </TabsContent>
@@ -623,7 +723,7 @@ export default function Page() {
                   </Label>
                   <Input
                     id="name"
-                    value={selectedProduct.name}
+                    value={selectedProduct.name || selectedProduct.productName}
                     onChange={(e) => setSelectedProduct({ ...selectedProduct, name: e.target.value })}
                     className="col-span-3"
                   />
@@ -639,7 +739,7 @@ export default function Page() {
                       const value = e.target.value
                       setSelectedProduct({
                         ...selectedProduct,
-                        price: value === "" ? "" : Number.parseFloat(value) || 0,
+                        price: value === "" ? 0 : Number.parseFloat(value) || 0,
                       })
                     }}
                     className="col-span-3"
@@ -650,7 +750,7 @@ export default function Page() {
                     Category
                   </Label>
                   <Select
-                    value={selectedProduct.category}
+                    value={selectedProduct.category || selectedProduct.categoryName}
                     onValueChange={(value) => setSelectedProduct({ ...selectedProduct, category: value })}
                   >
                     <SelectTrigger className="col-span-3">
@@ -671,8 +771,8 @@ export default function Page() {
                   </Label>
                   <div className="col-span-3">
                     <Image
-                      src={selectedProduct.image || "/placeholder.svg"}
-                      alt={selectedProduct.name}
+                      src={selectedProduct.image || selectedProduct.imageUrl || "/placeholder.svg"}
+                      alt={selectedProduct.name || selectedProduct.productName}
                       width={100}
                       height={100}
                       className="mb-2 rounded-md"
@@ -699,8 +799,8 @@ export default function Page() {
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button onClick={() => setIsEditDialogOpen(false)}>Save Changes</Button>
-              </motion.div>
+  <Button onClick={handleSaveProduct}>Save Changes</Button>
+</motion.div>
             </motion.div>
           </motion.div>
         </DialogContent>
