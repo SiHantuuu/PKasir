@@ -1,18 +1,27 @@
 // models/Category.js
 module.exports = (sequelize, DataTypes) => {
   const Category = sequelize.define(
-    "Category",
+    'Category',
     {
-      Nama: DataTypes.STRING,
+      Nama: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
+      },
     },
     {
-      tableName: "Category",
-      timestamps: false,
+      tableName: 'Categories', // Sesuaikan dengan migration
+      timestamps: true, // Sesuaikan dengan migration
     }
   );
 
   Category.associate = (models) => {
-    Category.hasMany(models.Produk, { foreignKey: "Category_id" });
+    Category.hasMany(models.Produk, {
+      foreignKey: 'Category_id',
+      as: 'products',
+    });
   };
 
   return Category;
