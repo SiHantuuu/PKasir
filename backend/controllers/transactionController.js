@@ -1,4 +1,4 @@
-// controllers/transactionController.js 
+// controllers/transactionController.js
 const {
   Transaksi,
   Transaction_detail,
@@ -6,52 +6,52 @@ const {
   Produk,
   Category,
   Role,
-} = require('../models');
-const { Op } = require('sequelize');
-const sequelize = require('../config/database');
-const Boom = require('@hapi/boom');
+} = require("../models");
+const { Op } = require("sequelize");
+const sequelize = require("../config/database");
+const Boom = require("@hapi/boom");
 
 const transactionController = {
-  // 1. Membuat transaksi top-up saldo
+  // 1. Create top-up transaction
   createTopupTransaction: async (request, h) => {
     const t = await sequelize.transaction();
 
     try {
       const { customer_id, amount, note } = request.payload;
 
-      // Validasi input
+      // Input validation
       if (!customer_id || !amount || amount <= 0) {
         await t.rollback();
         return Boom.badRequest(
-          'Customer ID dan amount wajib diisi dan amount harus lebih dari 0'
+          "Customer ID and amount are required and amount must be greater than 0"
         );
       }
 
-      // Cari user dan pastikan role student
+      // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+        include: [{ model: Role, as: "role", where: { name: "student" } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound('Siswa tidak ditemukan');
+        return Boom.notFound("Student not found");
       }
 
-      // Buat transaksi top-up
-      const transaksi = await Transaksi.create(
+      // Create top-up transaction
+      const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: 'topup',
+          Transaction_type: "topup",
           total_amount: amount,
-          Note: note || 'Top-up saldo',
-          status: 'completed',
+          Note: note || "Top-up balance",
+          status: "completed",
         },
         { transaction: t }
       );
 
-      // Update balance user
+      // Update user balance
       const newBalance = parseFloat(user.Balance) + parseFloat(amount);
       await user.update({ Balance: newBalance }, { transaction: t });
 
@@ -60,29 +60,28 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Top-up berhasil',
+          message: "Top-up successful",
           data: {
-            transaction: transaksi,
+            transaction,
             new_balance: newBalance,
           },
         })
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error('Error creating topup transaction:', error);
-      return Boom.internal('Gagal melakukan top-up');
+      console.error("Error creating topup transaction:", error);
+      return Boom.internal("Failed to process top-up");
     }
   },
 
-  // 2. Membuat transaksi pembelian
+  // 2. Create purchase transaction
   createPurchaseTransaction: async (request, h) => {
     const t = await sequelize.transaction();
 
     try {
       const { customer_id, items, note } = request.payload;
-      // items: [{ product_id: 1, amount: 2 }, { product_id: 2, amount: 1 }]
 
-      // Validasi input
+      // Input validation
       if (
         !customer_id ||
         !items ||
@@ -90,94 +89,92 @@ const transactionController = {
         items.length === 0
       ) {
         await t.rollback();
-        return Boom.badRequest('Customer ID dan items wajib diisi');
+        return Boom.badRequest("Customer ID and items are required");
       }
 
-      // Cari user dan pastikan role student
+      // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+        include: [{ model: Role, as: "role", where: { name: "student" } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound('Siswa tidak ditemukan');
+        return Boom.notFound("Student not found");
       }
 
       let totalAmount = 0;
       const purchaseDetails = [];
 
-      // Validasi dan hitung total untuk setiap item
+      // Validate and calculate total for each item
       for (const item of items) {
         const { product_id, amount } = item;
 
         if (!product_id || !amount || amount <= 0) {
           await t.rollback();
           return Boom.badRequest(
-            'Product ID dan amount wajib diisi untuk setiap item'
+            "Product ID and amount are required for each item"
           );
         }
 
-        // Cari produk
-        const produk = await Produk.findByPk(product_id, { transaction: t });
-        if (!produk) {
+        // Find product
+        const product = await Produk.findByPk(product_id, { transaction: t });
+        if (!product) {
           await t.rollback();
-          return Boom.notFound(
-            `Produk dengan ID ${product_id} tidak ditemukan`
-          );
+          return Boom.notFound(`Product with ID ${product_id} not found`);
         }
 
-        // Cek stok
-        if (produk.Stok < amount) {
+        // Check stock
+        if (product.Stok < amount) {
           await t.rollback();
           return Boom.badRequest(
-            `Stok ${produk.Nama} tidak mencukupi. Stok tersedia: ${produk.Stok}`
+            `Stock of ${product.Nama} is insufficient. Available: ${product.Stok}`
           );
         }
 
-        const itemTotal = parseFloat(produk.Harga) * amount;
+        const itemTotal = parseFloat(product.Harga) * amount;
         totalAmount += itemTotal;
 
         purchaseDetails.push({
-          product: produk,
-          amount: amount,
+          product,
+          amount,
           item_total: itemTotal,
         });
       }
 
-      // Cek saldo user
+      // Check user balance
       if (parseFloat(user.Balance) < totalAmount) {
         await t.rollback();
         return Boom.badRequest(
-          `Saldo tidak mencukupi. Saldo: ${user.Balance}, Total: ${totalAmount}`
+          `Insufficient balance. Balance: ${user.Balance}, Total: ${totalAmount}`
         );
       }
 
-      // Buat transaksi pembelian
-      const transaksi = await Transaksi.create(
+      // Create purchase transaction
+      const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: 'purchase',
+          Transaction_type: "purchase",
           total_amount: totalAmount,
-          Note: note || 'Pembelian produk',
-          status: 'completed',
+          Note: note || "Product purchase",
+          status: "completed",
         },
         { transaction: t }
       );
 
-      // Buat detail transaksi dan update stok
+      // Create transaction details and update stock
       for (const detail of purchaseDetails) {
         await Transaction_detail.create(
           {
-            Transaction_id: transaksi.id,
+            Transaction_id: transaction.id,
             Product_id: detail.product.id,
             amount: detail.amount,
           },
           { transaction: t }
         );
 
-        // Update stok produk
+        // Update product stock
         await detail.product.update(
           {
             Stok: detail.product.Stok - detail.amount,
@@ -186,7 +183,7 @@ const transactionController = {
         );
       }
 
-      // Update balance user
+      // Update user balance
       const newBalance = parseFloat(user.Balance) - totalAmount;
       await user.update({ Balance: newBalance }, { transaction: t });
 
@@ -195,9 +192,9 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Pembelian berhasil',
+          message: "Purchase successful",
           data: {
-            transaction: transaksi,
+            transaction,
             items: purchaseDetails.map((d) => ({
               product_name: d.product.Nama,
               amount: d.amount,
@@ -211,51 +208,51 @@ const transactionController = {
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error('Error creating purchase transaction:', error);
-      return Boom.internal('Gagal melakukan pembelian');
+      console.error("Error creating purchase transaction:", error);
+      return Boom.internal("Failed to process purchase");
     }
   },
 
-  // 3. Membuat transaksi penalty/denda
+  // 3. Create penalty transaction
   createPenaltyTransaction: async (request, h) => {
     const t = await sequelize.transaction();
 
     try {
       const { customer_id, amount, note } = request.payload;
 
-      // Validasi input
+      // Input validation
       if (!customer_id || !amount || amount <= 0) {
         await t.rollback();
         return Boom.badRequest(
-          'Customer ID dan amount wajib diisi dan amount harus lebih dari 0'
+          "Customer ID and amount are required and amount must be greater than 0"
         );
       }
 
-      // Cari user dan pastikan role student
+      // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+        include: [{ model: Role, as: "role", where: { name: "student" } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound('Siswa tidak ditemukan');
+        return Boom.notFound("Student not found");
       }
 
-      // Buat transaksi penalty (mengurangi saldo)
-      const transaksi = await Transaksi.create(
+      // Create penalty transaction (deduct balance)
+      const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: 'penalty',
+          Transaction_type: "penalty",
           total_amount: amount,
-          Note: note || 'Denda/Penalty',
-          status: 'completed',
+          Note: note || "Penalty/Deduction",
+          status: "completed",
         },
         { transaction: t }
       );
 
-      // Update balance user (kurangi saldo)
+      // Update user balance (deduct)
       const newBalance = parseFloat(user.Balance) - parseFloat(amount);
       await user.update({ Balance: newBalance }, { transaction: t });
 
@@ -264,9 +261,9 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Transaksi penalty berhasil',
+          message: "Penalty transaction successful",
           data: {
-            transaction: transaksi,
+            transaction,
             penalty_amount: amount,
             new_balance: newBalance,
           },
@@ -274,21 +271,21 @@ const transactionController = {
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error('Error creating penalty transaction:', error);
-      return Boom.internal('Gagal membuat transaksi penalty');
+      console.error("Error creating penalty transaction:", error);
+      return Boom.internal("Failed to create penalty transaction");
     }
   },
 
-  // 4. Mendapatkan semua transaksi
+  // 4. Get all transactions
   getAllTransactions: async (request, h) => {
     try {
       const {
         page = 1,
         limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
-        type = 'all',
-        status = 'all',
+        sortBy = "createdAt",
+        sortOrder = "DESC",
+        type = "all",
+        status = "all",
         startDate,
         endDate,
       } = request.query;
@@ -296,17 +293,17 @@ const transactionController = {
       const offset = (page - 1) * parseInt(limit);
       const whereClause = {};
 
-      // Filter berdasarkan tipe transaksi
-      if (type !== 'all') {
+      // Filter by transaction type
+      if (type !== "all") {
         whereClause.Transaction_type = type;
       }
 
-      // Filter berdasarkan status
-      if (status !== 'all') {
+      // Filter by status
+      if (status !== "all") {
         whereClause.status = status;
       }
 
-      // Filter berdasarkan tanggal
+      // Filter by date range
       if (startDate && endDate) {
         whereClause.createdAt = {
           [Op.between]: [new Date(startDate), new Date(endDate)],
@@ -318,9 +315,9 @@ const transactionController = {
         include: [
           {
             model: User,
-            as: 'customer',
-            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            as: "customer",
+            attributes: ["id", "Nama", "NIS", "NISN", "username"],
+            include: [{ model: Role, as: "role", attributes: ["name"] }],
           },
         ],
         order: [[sortBy, sortOrder.toUpperCase()]],
@@ -333,7 +330,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Data transaksi berhasil diambil',
+          message: "Transaction data retrieved successfully",
           data: {
             transactions,
             pagination: {
@@ -348,38 +345,38 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error('Error getting all transactions:', error);
-      return Boom.internal('Gagal mengambil data transaksi');
+      console.error("Error getting all transactions:", error);
+      return Boom.internal("Failed to retrieve transaction data");
     }
   },
 
-  // 5. Mendapatkan transaksi berdasarkan ID
+  // 5. Get transaction by ID
   getTransactionById: async (request, h) => {
     try {
       const { id } = request.params;
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest('ID transaksi tidak valid');
+        return Boom.badRequest("Invalid transaction ID");
       }
 
       const transaction = await Transaksi.findByPk(parseInt(id), {
         include: [
           {
             model: User,
-            as: 'customer',
-            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username', 'Balance'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            as: "customer",
+            attributes: ["id", "Nama", "NIS", "NISN", "username", "Balance"],
+            include: [{ model: Role, as: "role", attributes: ["name"] }],
           },
           {
             model: Transaction_detail,
-            as: 'details',
+            as: "details",
             include: [
               {
                 model: Produk,
-                as: 'product',
-                attributes: ['id', 'Nama', 'Harga'],
+                as: "product",
+                attributes: ["id", "Nama", "Harga"],
                 include: [
-                  { model: Category, as: 'category', attributes: ['Nama'] },
+                  { model: Category, as: "category", attributes: ["Nama"] },
                 ],
               },
             ],
@@ -388,52 +385,52 @@ const transactionController = {
       });
 
       if (!transaction) {
-        return Boom.notFound('Transaksi tidak ditemukan');
+        return Boom.notFound("Transaction not found");
       }
 
       return h
         .response({
           success: true,
-          message: 'Data transaksi berhasil diambil',
+          message: "Transaction data retrieved successfully",
           data: transaction,
         })
         .code(200);
     } catch (error) {
-      console.error('Error getting transaction by ID:', error);
-      return Boom.internal('Gagal mengambil data transaksi');
+      console.error("Error getting transaction by ID:", error);
+      return Boom.internal("Failed to retrieve transaction data");
     }
   },
 
-  // 6. Mendapatkan transaksi berdasarkan siswa ID
+  // 6. Get transactions by student ID
   getTransactionsBySiswa: async (request, h) => {
     try {
       const { siswaId } = request.params;
       const {
         page = 1,
         limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
-        type = 'all',
+        sortBy = "createdAt",
+        sortOrder = "DESC",
+        type = "all",
       } = request.query;
 
       if (!siswaId || isNaN(parseInt(siswaId))) {
-        return Boom.badRequest('ID siswa tidak valid');
+        return Boom.badRequest("Invalid student ID");
       }
 
-      // Pastikan siswa ada dan role student
-      const siswa = await User.findOne({
+      // Verify student exists and has student role
+      const student = await User.findOne({
         where: { id: parseInt(siswaId) },
-        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+        include: [{ model: Role, as: "role", where: { name: "student" } }],
       });
 
-      if (!siswa) {
-        return Boom.notFound('Siswa tidak ditemukan');
+      if (!student) {
+        return Boom.notFound("Student not found");
       }
 
       const offset = (page - 1) * parseInt(limit);
       const whereClause = { Customer_id: parseInt(siswaId) };
 
-      if (type !== 'all') {
+      if (type !== "all") {
         whereClause.Transaction_type = type;
       }
 
@@ -442,12 +439,12 @@ const transactionController = {
         include: [
           {
             model: Transaction_detail,
-            as: 'details',
+            as: "details",
             include: [
               {
                 model: Produk,
-                as: 'product',
-                attributes: ['id', 'Nama', 'Harga'],
+                as: "product",
+                attributes: ["id", "Nama", "Harga"],
               },
             ],
           },
@@ -462,14 +459,14 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: `Transaksi untuk ${siswa.Nama} berhasil diambil`,
+          message: `Transactions for ${student.Nama} retrieved successfully`,
           data: {
-            siswa: {
-              id: siswa.id,
-              nama: siswa.Nama,
-              nis: siswa.NIS,
-              nisn: siswa.NISN,
-              balance: siswa.Balance,
+            student: {
+              id: student.id,
+              nama: student.Nama,
+              nis: student.NIS,
+              nisn: student.NISN,
+              balance: student.Balance,
             },
             transactions,
             pagination: {
@@ -484,19 +481,19 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error('Error getting transactions by siswa:', error);
-      return Boom.internal('Gagal mengambil transaksi siswa');
+      console.error("Error getting transactions by student:", error);
+      return Boom.internal("Failed to retrieve student transactions");
     }
   },
 
-  // 7. Mendapatkan riwayat transaksi dengan filter waktu
+  // 7. Get transaction history with time filters
   getTransactionHistory: async (request, h) => {
     try {
       const {
         startDate,
         endDate,
         siswaId,
-        type = 'all',
+        type = "all",
         page = 1,
         limit = 50,
       } = request.query;
@@ -504,20 +501,20 @@ const transactionController = {
       const whereClause = {};
       const offset = (page - 1) * parseInt(limit);
 
-      // Filter tanggal
+      // Date filter
       if (startDate && endDate) {
         whereClause.createdAt = {
           [Op.between]: [new Date(startDate), new Date(endDate)],
         };
       }
 
-      // Filter siswa
+      // Student filter
       if (siswaId) {
         whereClause.Customer_id = parseInt(siswaId);
       }
 
-      // Filter tipe transaksi
-      if (type !== 'all') {
+      // Transaction type filter
+      if (type !== "all") {
         whereClause.Transaction_type = type;
       }
 
@@ -526,36 +523,36 @@ const transactionController = {
         include: [
           {
             model: User,
-            as: 'customer',
-            attributes: ['id', 'Nama', 'NIS', 'NISN'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            as: "customer",
+            attributes: ["id", "Nama", "NIS", "NISN"],
+            include: [{ model: Role, as: "role", attributes: ["name"] }],
           },
           {
             model: Transaction_detail,
-            as: 'details',
+            as: "details",
             include: [
               {
                 model: Produk,
-                as: 'product',
-                attributes: ['id', 'Nama', 'Harga'],
+                as: "product",
+                attributes: ["id", "Nama", "Harga"],
               },
             ],
           },
         ],
-        order: [['createdAt', 'DESC']],
+        order: [["createdAt", "DESC"]],
         limit: parseInt(limit),
         offset: offset,
       });
 
-      // Statistik transaksi
+      // Transaction statistics
       const stats = await Transaksi.findAll({
         where: whereClause,
         attributes: [
-          'Transaction_type',
-          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
-          [sequelize.fn('SUM', sequelize.col('total_amount')), 'total'],
+          "Transaction_type",
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+          [sequelize.fn("SUM", sequelize.col("total_amount")), "total"],
         ],
-        group: ['Transaction_type'],
+        group: ["Transaction_type"],
         raw: true,
       });
 
@@ -564,7 +561,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Riwayat transaksi berhasil diambil',
+          message: "Transaction history retrieved successfully",
           data: {
             transactions,
             statistics: stats,
@@ -584,41 +581,41 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error('Error getting transaction history:', error);
-      return Boom.internal('Gagal mengambil riwayat transaksi');
+      console.error("Error getting transaction history:", error);
+      return Boom.internal("Failed to retrieve transaction history");
     }
   },
 
-  // 8. Mendapatkan detail transaksi lengkap dengan produk
+  // 8. Get transaction details with products
   getTransactionDetails: async (request, h) => {
     try {
       const { id } = request.params;
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest('ID transaksi tidak valid');
+        return Boom.badRequest("Invalid transaction ID");
       }
 
       const transaction = await Transaksi.findByPk(parseInt(id), {
         include: [
           {
             model: User,
-            as: 'customer',
-            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username', 'Balance'],
-            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            as: "customer",
+            attributes: ["id", "Nama", "NIS", "NISN", "username", "Balance"],
+            include: [{ model: Role, as: "role", attributes: ["name"] }],
           },
           {
             model: Transaction_detail,
-            as: 'details',
+            as: "details",
             include: [
               {
                 model: Produk,
-                as: 'product',
-                attributes: ['id', 'Nama', 'Harga', 'Stok'],
+                as: "product",
+                attributes: ["id", "Nama", "Harga", "Stok"],
                 include: [
                   {
                     model: Category,
-                    as: 'category',
-                    attributes: ['id', 'Nama'],
+                    as: "category",
+                    attributes: ["id", "Nama"],
                   },
                 ],
               },
@@ -628,14 +625,14 @@ const transactionController = {
       });
 
       if (!transaction) {
-        return Boom.notFound('Transaksi tidak ditemukan');
+        return Boom.notFound("Transaction not found");
       }
 
-      // Format detail untuk response yang lebih readable
+      // Format details for more readable response
       const formattedDetails =
         transaction.details?.map((detail) => ({
           product_id: detail.Product_id,
-          product_name: detail.product?.Nama || 'Produk tidak ditemukan',
+          product_name: detail.product?.Nama || "Product not found",
           product_price: detail.product?.Harga || 0,
           category: detail.product?.category?.Nama || null,
           quantity: detail.amount,
@@ -647,7 +644,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Detail transaksi berhasil diambil',
+          message: "Transaction details retrieved successfully",
           data: {
             transaction: {
               id: transaction.id,
@@ -680,12 +677,12 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error('Error getting transaction details:', error);
-      return Boom.internal('Gagal mengambil detail transaksi');
+      console.error("Error getting transaction details:", error);
+      return Boom.internal("Failed to retrieve transaction details");
     }
   },
 
-  // 9. Menghapus transaksi (opsional, untuk admin)
+  // 9. Delete transaction (optional, for admin)
   deleteTransaction: async (request, h) => {
     const t = await sequelize.transaction();
 
@@ -694,20 +691,20 @@ const transactionController = {
       const { reason } = request.payload || {};
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest('ID transaksi tidak valid');
+        return Boom.badRequest("Invalid transaction ID");
       }
 
-      // Cari transaksi dengan detail
+      // Find transaction with details
       const transaction = await Transaksi.findByPk(parseInt(id), {
         include: [
           {
             model: User,
-            as: 'customer',
+            as: "customer",
           },
           {
             model: Transaction_detail,
-            as: 'details',
-            include: [{ model: Produk, as: 'product' }],
+            as: "details",
+            include: [{ model: Produk, as: "product" }],
           },
         ],
         transaction: t,
@@ -715,13 +712,13 @@ const transactionController = {
 
       if (!transaction) {
         await t.rollback();
-        return Boom.notFound('Transaksi tidak ditemukan');
+        return Boom.notFound("Transaction not found");
       }
 
-      // Tidak bisa hapus transaksi yang sudah selesai tanpa reversal
-      if (transaction.status === 'completed') {
-        // Untuk transaksi purchase, kembalikan stok produk
-        if (transaction.Transaction_type === 'purchase') {
+      // Can't delete completed transaction without reversal
+      if (transaction.status === "completed") {
+        // For purchase transactions, restore product stock
+        if (transaction.Transaction_type === "purchase") {
           for (const detail of transaction.details) {
             if (detail.product) {
               await detail.product.update(
@@ -734,16 +731,16 @@ const transactionController = {
           }
         }
 
-        // Reversal balance berdasarkan tipe transaksi
+        // Reversal balance based on transaction type
         const customer = transaction.customer;
         let newBalance = parseFloat(customer.Balance);
 
         switch (transaction.Transaction_type) {
-          case 'topup':
+          case "topup":
             newBalance -= parseFloat(transaction.total_amount);
             break;
-          case 'purchase':
-          case 'penalty':
+          case "purchase":
+          case "penalty":
             newBalance += parseFloat(transaction.total_amount);
             break;
         }
@@ -751,13 +748,13 @@ const transactionController = {
         await customer.update({ Balance: newBalance }, { transaction: t });
       }
 
-      // Hapus detail transaksi terlebih dahulu
+      // Delete transaction details first
       await Transaction_detail.destroy({
         where: { Transaction_id: parseInt(id) },
         transaction: t,
       });
 
-      // Hapus transaksi
+      // Delete transaction
       await transaction.destroy({ transaction: t });
 
       await t.commit();
@@ -765,14 +762,14 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: 'Transaksi berhasil dihapus',
+          message: "Transaction deleted successfully",
           data: {
             deleted_transaction_id: parseInt(id),
             transaction_type: transaction.Transaction_type,
             amount: transaction.total_amount,
-            reason: reason || 'Tidak ada alasan',
+            reason: reason || "No reason provided",
             customer_new_balance: transaction.customer
-              ? transaction.Transaction_type === 'topup'
+              ? transaction.Transaction_type === "topup"
                 ? parseFloat(transaction.customer.Balance) -
                   parseFloat(transaction.total_amount)
                 : parseFloat(transaction.customer.Balance) +
@@ -783,8 +780,8 @@ const transactionController = {
         .code(200);
     } catch (error) {
       await t.rollback();
-      console.error('Error deleting transaction:', error);
-      return Boom.internal('Gagal menghapus transaksi');
+      console.error("Error deleting transaction:", error);
+      return Boom.internal("Failed to delete transaction");
     }
   },
 };

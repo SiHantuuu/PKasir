@@ -1,17 +1,13 @@
-require('dotenv').config(); // Load environment variables dari .env
-const Hapi = require('@hapi/hapi');
-const Sequelize = require('sequelize');
-const Jwt = require('@hapi/jwt');
+require("dotenv").config(); // Load environment variables dari .env
+const Hapi = require("@hapi/hapi");
+const Sequelize = require("sequelize");
+const Jwt = require("@hapi/jwt");
 
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const categorytRoutes = require('./routes/categoryRoutes');
-const topupRoutes = require('./routes/topupRoutes');
-const transcationtRoutes = require('./routes/historyRoutes');
+const routes = require("./routes");
 
 // Ambil konfigurasi database
-const env = process.env.NODE_ENV || 'development';
-const dbConfig = require('./config/config.json')[env];
+const env = process.env.NODE_ENV || "development";
+const dbConfig = require("./config/config.json")[env];
 
 const init = async () => {
   // Inisialisasi koneksi database
@@ -31,7 +27,7 @@ const init = async () => {
     await sequelize.authenticate();
     console.log(`✅ Berhasil terhubung ke database: ${dbConfig.database}`);
   } catch (error) {
-    console.error('❌ Koneksi database gagal:', error);
+    console.error("❌ Koneksi database gagal:", error);
     process.exit(1); // Hentikan aplikasi jika koneksi gagal
   }
 
@@ -41,11 +37,11 @@ const init = async () => {
   // Inisialisasi server Hapi
   const server = Hapi.server({
     port: process.env.PORT || 3001,
-    host: process.env.HOST || 'localhost',
+    host: process.env.HOST || "localhost",
     routes: {
       cors: {
-        origin: ['*'],
-        headers: ['Accept', 'Content-Type'],
+        origin: ["*"],
+        headers: ["Accept", "Content-Type"],
         credentials: true,
       },
     },
@@ -55,8 +51,8 @@ const init = async () => {
   await server.register(Jwt);
 
   // Set up JWT authentication strategy
-  server.auth.strategy('jwt', 'jwt', {
-    keys: process.env.JWT_SECRET || 'default_secret_key',
+  server.auth.strategy("jwt", "jwt", {
+    keys: process.env.JWT_SECRET || "default_secret_key",
     verify: {
       aud: false,
       iss: false,
@@ -74,11 +70,7 @@ const init = async () => {
   });
 
   // Daftarkan routes
-  server.route(authRoutes);
-  server.route(productRoutes);
-  server.route(categorytRoutes);
-  server.route(topupRoutes);
-  server.route(transcationtRoutes);
+  server.route(routes);
 
   // Jalankan server
   await server.start();
@@ -86,8 +78,8 @@ const init = async () => {
 };
 
 // Tangani error global
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err);
+process.on("unhandledRejection", (err) => {
+  console.error("❌ Unhandled Rejection:", err);
   process.exit(1);
 });
 
