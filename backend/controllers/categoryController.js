@@ -1,7 +1,6 @@
 // controllers/categoryController.js
-const { Category, Produk } = require('../models');
-const Joi = require('joi');
-const { Op } = require('sequelize');
+const { Category, Produk } = require("../models");
+const { Op } = require("sequelize");
 
 // Helper function untuk response format
 const sendResponse = (h, status, success, message, data = null) => {
@@ -34,7 +33,7 @@ const categoryController = {
           h,
           409,
           false,
-          'Kategori dengan nama tersebut sudah ada'
+          "Kategori dengan nama tersebut sudah ada"
         );
       }
 
@@ -47,16 +46,16 @@ const categoryController = {
         h,
         201,
         true,
-        'Kategori berhasil dibuat',
+        "Kategori berhasil dibuat",
         newCategory
       );
     } catch (error) {
-      console.error('Error in createCategory:', error);
+      console.error("Error in createCategory:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -71,7 +70,7 @@ const categoryController = {
       // Cari kategori berdasarkan ID
       const category = await Category.findByPk(id);
       if (!category) {
-        return sendResponse(h, 404, false, 'Kategori tidak ditemukan');
+        return sendResponse(h, 404, false, "Kategori tidak ditemukan");
       }
 
       // Cek apakah nama kategori baru sudah digunakan oleh kategori lain
@@ -91,7 +90,7 @@ const categoryController = {
           h,
           409,
           false,
-          'Kategori dengan nama tersebut sudah ada'
+          "Kategori dengan nama tersebut sudah ada"
         );
       }
 
@@ -107,16 +106,16 @@ const categoryController = {
         h,
         200,
         true,
-        'Kategori berhasil diperbarui',
+        "Kategori berhasil diperbarui",
         updatedCategory
       );
     } catch (error) {
-      console.error('Error in updateCategory:', error);
+      console.error("Error in updateCategory:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -131,11 +130,11 @@ const categoryController = {
       let includeOptions = [];
 
       // Jika diminta, sertakan produk-produk dalam kategori
-      if (includeProducts === 'true') {
+      if (includeProducts === "true") {
         includeOptions.push({
           model: Produk,
-          as: 'products',
-          attributes: ['id', 'Nama', 'Harga', 'Stok'],
+          as: "products",
+          attributes: ["id", "Nama", "Harga", "Stok"],
         });
       }
 
@@ -144,23 +143,23 @@ const categoryController = {
       });
 
       if (!category) {
-        return sendResponse(h, 404, false, 'Kategori tidak ditemukan');
+        return sendResponse(h, 404, false, "Kategori tidak ditemukan");
       }
 
       return sendResponse(
         h,
         200,
         true,
-        'Data kategori berhasil diambil',
+        "Data kategori berhasil diambil",
         category
       );
     } catch (error) {
-      console.error('Error in getCategoryById:', error);
+      console.error("Error in getCategoryById:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -172,10 +171,10 @@ const categoryController = {
       const {
         page = 1,
         limit = 10,
-        search = '',
+        search = "",
         includeProducts = false,
-        sortBy = 'createdAt',
-        sortOrder = 'DESC',
+        sortBy = "createdAt",
+        sortOrder = "DESC",
       } = request.query;
 
       const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -190,22 +189,22 @@ const categoryController = {
 
       // Build include options
       let includeOptions = [];
-      if (includeProducts === 'true') {
+      if (includeProducts === "true") {
         includeOptions.push({
           model: Produk,
-          as: 'products',
-          attributes: ['id', 'Nama', 'Harga', 'Stok'],
+          as: "products",
+          attributes: ["id", "Nama", "Harga", "Stok"],
         });
       }
 
       // Validasi sortBy
-      const allowedSortFields = ['id', 'Nama', 'createdAt', 'updatedAt'];
+      const allowedSortFields = ["id", "Nama", "createdAt", "updatedAt"];
       const validSortBy = allowedSortFields.includes(sortBy)
         ? sortBy
-        : 'createdAt';
-      const validSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase())
+        : "createdAt";
+      const validSortOrder = ["ASC", "DESC"].includes(sortOrder.toUpperCase())
         ? sortOrder.toUpperCase()
-        : 'DESC';
+        : "DESC";
 
       const { count, rows } = await Category.findAndCountAll({
         where: whereClause,
@@ -217,7 +216,7 @@ const categoryController = {
 
       const totalPages = Math.ceil(count / parseInt(limit));
 
-      return sendResponse(h, 200, true, 'Data kategori berhasil diambil', {
+      return sendResponse(h, 200, true, "Data kategori berhasil diambil", {
         categories: rows,
         pagination: {
           currentPage: parseInt(page),
@@ -227,12 +226,12 @@ const categoryController = {
         },
       });
     } catch (error) {
-      console.error('Error in getAllCategories:', error);
+      console.error("Error in getAllCategories:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -247,7 +246,7 @@ const categoryController = {
       // Cari kategori berdasarkan ID
       const category = await Category.findByPk(id);
       if (!category) {
-        return sendResponse(h, 404, false, 'Kategori tidak ditemukan');
+        return sendResponse(h, 404, false, "Kategori tidak ditemukan");
       }
 
       // Cek apakah ada produk yang menggunakan kategori ini
@@ -255,7 +254,7 @@ const categoryController = {
         where: { Category_id: id },
       });
 
-      if (productCount > 0 && force !== 'true') {
+      if (productCount > 0 && force !== "true") {
         return sendResponse(
           h,
           400,
@@ -266,7 +265,7 @@ const categoryController = {
       }
 
       // Jika force delete, update produk untuk menghilangkan kategori
-      if (productCount > 0 && force === 'true') {
+      if (productCount > 0 && force === "true") {
         await Produk.update(
           { Category_id: null },
           { where: { Category_id: id } }
@@ -279,19 +278,19 @@ const categoryController = {
       const message =
         productCount > 0
           ? `Kategori berhasil dihapus dan ${productCount} produk telah dilepas dari kategori ini`
-          : 'Kategori berhasil dihapus';
+          : "Kategori berhasil dihapus";
 
       return sendResponse(h, 200, true, message, {
         deletedCategory: category,
         affectedProducts: productCount,
       });
     } catch (error) {
-      console.error('Error in deleteCategory:', error);
+      console.error("Error in deleteCategory:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -300,7 +299,7 @@ const categoryController = {
   // Bonus: Get Categories with Product Count
   getCategoriesWithProductCount: async (request, h) => {
     try {
-      const { search = '' } = request.query;
+      const { search = "" } = request.query;
 
       const whereClause = {};
       if (search) {
@@ -314,39 +313,39 @@ const categoryController = {
         include: [
           {
             model: Produk,
-            as: 'products',
+            as: "products",
             attributes: [],
           },
         ],
         attributes: {
           include: [
             [
-              require('sequelize').fn(
-                'COUNT',
-                require('sequelize').col('products.id')
+              require("sequelize").fn(
+                "COUNT",
+                require("sequelize").col("products.id")
               ),
-              'productCount',
+              "productCount",
             ],
           ],
         },
-        group: ['Category.id'],
-        order: [['Nama', 'ASC']],
+        group: ["Category.id"],
+        order: [["Nama", "ASC"]],
       });
 
       return sendResponse(
         h,
         200,
         true,
-        'Data kategori dengan jumlah produk berhasil diambil',
+        "Data kategori dengan jumlah produk berhasil diambil",
         categories
       );
     } catch (error) {
-      console.error('Error in getCategoriesWithProductCount:', error);
+      console.error("Error in getCategoriesWithProductCount:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
@@ -363,7 +362,7 @@ const categoryController = {
           h,
           400,
           false,
-          'categoryIds harus berupa array dan tidak boleh kosong'
+          "categoryIds harus berupa array dan tidak boleh kosong"
         );
       }
 
@@ -373,7 +372,7 @@ const categoryController = {
       });
 
       if (categories.length === 0) {
-        return sendResponse(h, 404, false, 'Tidak ada kategori yang ditemukan');
+        return sendResponse(h, 404, false, "Tidak ada kategori yang ditemukan");
       }
 
       const foundIds = categories.map((cat) => cat.id);
@@ -386,7 +385,7 @@ const categoryController = {
         where: { Category_id: { [Op.in]: foundIds } },
       });
 
-      if (productCount > 0 && force !== 'true') {
+      if (productCount > 0 && force !== "true") {
         return sendResponse(
           h,
           400,
@@ -397,7 +396,7 @@ const categoryController = {
       }
 
       // Jika force delete, update produk
-      if (productCount > 0 && force === 'true') {
+      if (productCount > 0 && force === "true") {
         await Produk.update(
           { Category_id: null },
           { where: { Category_id: { [Op.in]: foundIds } } }
@@ -421,100 +420,16 @@ const categoryController = {
         }
       );
     } catch (error) {
-      console.error('Error in bulkDeleteCategories:', error);
+      console.error("Error in bulkDeleteCategories:", error);
       return sendResponse(
         h,
         500,
         false,
-        'Terjadi kesalahan server',
+        "Terjadi kesalahan server",
         error.message
       );
     }
   },
 };
 
-// Validation schemas untuk Hapi.js
-const validationSchemas = {
-  createCategory: {
-    payload: Joi.object({
-      Nama: Joi.string().trim().min(1).max(255).required().messages({
-        'string.empty': 'Nama kategori tidak boleh kosong',
-        'string.min': 'Nama kategori minimal 1 karakter',
-        'string.max': 'Nama kategori maksimal 255 karakter',
-        'any.required': 'Nama kategori wajib diisi',
-      }),
-    }),
-  },
-
-  updateCategory: {
-    params: Joi.object({
-      id: Joi.number().integer().positive().required(),
-    }),
-    payload: Joi.object({
-      Nama: Joi.string().trim().min(1).max(255).required().messages({
-        'string.empty': 'Nama kategori tidak boleh kosong',
-        'string.min': 'Nama kategori minimal 1 karakter',
-        'string.max': 'Nama kategori maksimal 255 karakter',
-        'any.required': 'Nama kategori wajib diisi',
-      }),
-    }),
-  },
-
-  getCategoryById: {
-    params: Joi.object({
-      id: Joi.number().integer().positive().required(),
-    }),
-    query: Joi.object({
-      includeProducts: Joi.string().valid('true', 'false').optional(),
-    }),
-  },
-
-  getAllCategories: {
-    query: Joi.object({
-      page: Joi.number().integer().min(1).optional(),
-      limit: Joi.number().integer().min(1).max(100).optional(),
-      search: Joi.string().optional(),
-      includeProducts: Joi.string().valid('true', 'false').optional(),
-      sortBy: Joi.string()
-        .valid('id', 'Nama', 'createdAt', 'updatedAt')
-        .optional(),
-      sortOrder: Joi.string().valid('ASC', 'DESC').optional(),
-    }),
-  },
-
-  deleteCategory: {
-    params: Joi.object({
-      id: Joi.number().integer().positive().required(),
-    }),
-    query: Joi.object({
-      force: Joi.string().valid('true', 'false').optional(),
-    }),
-  },
-
-  getCategoriesWithProductCount: {
-    query: Joi.object({
-      search: Joi.string().optional(),
-    }),
-  },
-
-  bulkDeleteCategories: {
-    payload: Joi.object({
-      categoryIds: Joi.array()
-        .items(Joi.number().integer().positive())
-        .min(1)
-        .required()
-        .messages({
-          'array.min': 'Minimal harus ada 1 kategori yang dipilih',
-          'any.required': 'categoryIds wajib diisi',
-        }),
-    }),
-    query: Joi.object({
-      force: Joi.string().valid('true', 'false').optional(),
-    }),
-  },
-};
-
-module.exports = {
-  categoryController,
-  validationSchemas,
-};
+module.exports = { categoryController };
