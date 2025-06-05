@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
-          isIn: [['purchase', 'topup', 'refund', 'transfer']],
+          isIn: [['purchase', 'topup', 'refund', 'transfer','penalty']],
         },
       },
       total_amount: {

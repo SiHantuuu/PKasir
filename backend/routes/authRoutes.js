@@ -1,4 +1,4 @@
-const { authController } = require("../controllers/authController");
+const  authController  = require("../controllers/authController");
 const Joi = require("joi");
 
 const authRoutes = [

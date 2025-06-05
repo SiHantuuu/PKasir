@@ -29,10 +29,11 @@ const produkController = {
       }
 
       // Cek apakah produk dengan nama yang sama sudah ada
+      // Menggunakan LIKE dengan LOWER() untuk case insensitive di MySQL
       const existingProduct = await Produk.findOne({
         where: {
           Nama: {
-            [Op.iLike]: Nama.trim(), // Case insensitive
+            [Op.like]: Nama.trim(), // Menggunakan Op.like untuk MySQL
           },
         },
       });
@@ -101,7 +102,7 @@ const produkController = {
         const existingProduct = await Produk.findOne({
           where: {
             Nama: {
-              [Op.iLike]: Nama.trim(),
+              [Op.like]: Nama.trim(), // Menggunakan Op.like untuk MySQL
             },
             id: {
               [Op.ne]: id,
@@ -233,10 +234,10 @@ const produkController = {
       // Build where clause
       const whereClause = {};
 
-      // Search berdasarkan nama produk
+      // Search berdasarkan nama produk - menggunakan LIKE untuk MySQL
       if (search) {
         whereClause.Nama = {
-          [Op.iLike]: `%${search}%`,
+          [Op.like]: `%${search}%`,
         };
       }
 

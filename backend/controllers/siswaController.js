@@ -159,7 +159,7 @@ const siswaController = {
     }
   },
 
-  // 3. Search students
+  // 3. Search students - FIXED for MySQL
   searchSiswa: async (request, h) => {
     try {
       const {
@@ -182,14 +182,15 @@ const siswaController = {
       const searchQuery = query.trim();
       const offset = (page - 1) * parseInt(limit);
 
+      // FIXED: Changed Op.iLike to Op.like for MySQL compatibility
       const whereClause = {
         [Op.and]: [
           {
             [Op.or]: [
-              { Nama: { [Op.iLike]: `%${searchQuery}%` } },
-              { NIS: { [Op.iLike]: `%${searchQuery}%` } },
-              { NISN: { [Op.iLike]: `%${searchQuery}%` } },
-              { username: { [Op.iLike]: `%${searchQuery}%` } },
+              { Nama: { [Op.like]: `%${searchQuery}%` } },
+              { NIS: { [Op.like]: `%${searchQuery}%` } },
+              { NISN: { [Op.like]: `%${searchQuery}%` } },
+              { username: { [Op.like]: `%${searchQuery}%` } },
             ],
           },
         ],

@@ -1,4 +1,4 @@
-const { siswaController } = require("../controllers/siswaController");
+const  siswaController  = require("../controllers/siswaController");
 const Joi = require("joi");
 
 const siswaRoutes = [

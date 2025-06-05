@@ -1,6 +1,5 @@
-const {
-  transactionController,
-} = require("../controllers/transactionController");
+const transactionController = require("../controllers/transactionController");
+
 const Joi = require("joi");
 
 const transactionRoutes = [

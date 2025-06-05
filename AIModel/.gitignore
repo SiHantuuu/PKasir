@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+
+# IDE/editor config
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Output files
+*.jpg
+*.png
+*.jpeg
+photo_detected.jpg
+detected_result.png
+
+# Weights
+*.pt

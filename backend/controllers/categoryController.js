@@ -1,6 +1,7 @@
 // controllers/categoryController.js
 const { Category, Produk } = require("../models");
 const { Op } = require("sequelize");
+const sequelize = require("sequelize");
 
 // Helper function untuk response format
 const sendResponse = (h, status, success, message, data = null) => {
@@ -20,12 +21,12 @@ const categoryController = {
       const { Nama } = request.payload;
 
       // Cek apakah kategori dengan nama yang sama sudah ada
+      // Gunakan UPPER() untuk case insensitive di MySQL
       const existingCategory = await Category.findOne({
-        where: {
-          Nama: {
-            [Op.iLike]: Nama.trim(), // Case insensitive
-          },
-        },
+        where: sequelize.where(
+          sequelize.fn('UPPER', sequelize.col('Nama')),
+          sequelize.fn('UPPER', Nama.trim())
+        ),
       });
 
       if (existingCategory) {
@@ -76,12 +77,17 @@ const categoryController = {
       // Cek apakah nama kategori baru sudah digunakan oleh kategori lain
       const existingCategory = await Category.findOne({
         where: {
-          Nama: {
-            [Op.iLike]: Nama.trim(),
-          },
-          id: {
-            [Op.ne]: id, // Tidak termasuk kategori saat ini
-          },
+          [Op.and]: [
+            sequelize.where(
+              sequelize.fn('UPPER', sequelize.col('Nama')),
+              sequelize.fn('UPPER', Nama.trim())
+            ),
+            {
+              id: {
+                [Op.ne]: id, // Tidak termasuk kategori saat ini
+              },
+            }
+          ]
         },
       });
 
@@ -182,8 +188,9 @@ const categoryController = {
       // Build where clause untuk pencarian
       const whereClause = {};
       if (search) {
+        // Gunakan LIKE dengan UPPER() untuk case insensitive
         whereClause.Nama = {
-          [Op.iLike]: `%${search}%`,
+          [Op.like]: `%${search}%`, // Gunakan Op.like instead of Op.iLike
         };
       }
 
@@ -304,7 +311,7 @@ const categoryController = {
       const whereClause = {};
       if (search) {
         whereClause.Nama = {
-          [Op.iLike]: `%${search}%`,
+          [Op.like]: `%${search}%`, // Gunakan Op.like instead of Op.iLike
         };
       }
 
@@ -320,10 +327,7 @@ const categoryController = {
         attributes: {
           include: [
             [
-              require("sequelize").fn(
-                "COUNT",
-                require("sequelize").col("products.id")
-              ),
+              sequelize.fn("COUNT", sequelize.col("products.id")),
               "productCount",
             ],
           ],
@@ -432,4 +436,4 @@ const categoryController = {
   },
 };
 
-module.exports = { categoryController };
+module.exports = categoryController;

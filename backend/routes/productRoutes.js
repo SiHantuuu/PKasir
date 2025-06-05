@@ -1,4 +1,4 @@
-const { produkController } = require("../controllers/productController");
+const produkController = require("../controllers/productController");
 const Joi = require("joi");
 
 const productRoutes = [

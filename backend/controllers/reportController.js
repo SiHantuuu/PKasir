@@ -8,7 +8,7 @@ const {
   Role,
 } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
-const sequelize = require('../config/database');
+const sequelize = require('../config/config.json');
 const Boom = require('@hapi/boom');
 
 const reportController = {

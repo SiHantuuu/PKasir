@@ -6,9 +6,9 @@ const {
   Produk,
   Category,
   Role,
+  sequelize, // Import sequelize instance from models
 } = require("../models");
 const { Op } = require("sequelize");
-const sequelize = require("../config/database");
 const Boom = require("@hapi/boom");
 
 const transactionController = {
