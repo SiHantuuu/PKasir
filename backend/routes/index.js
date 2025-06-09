@@ -3,6 +3,8 @@ const productRoutes = require("./productRoutes");
 const siswaRoutes = require("./siswaRoutes");
 const transactionRoutes = require("./transactionRoutes");
 const authRoutes = require("./authRoutes");
+const reportRoutes = require("./reportRoutes");
+const predictRoutes = require("./predictRoutes");
 
 const routes = [
   ...categoryRoutes,
@@ -10,6 +12,8 @@ const routes = [
   ...siswaRoutes,
   ...transactionRoutes,
   ...authRoutes,
+  ...reportRoutes,
+  ...predictRoutes,
 ];
 
 module.exports = routes;
