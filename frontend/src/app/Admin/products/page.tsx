@@ -1,18 +1,53 @@
-"use client"
+'use client';
 
-import { useState, useMemo } from "react"
-import { AppSidebar } from "@/components/app-sidebar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Grid, List, Plus, Search, Tag, Trash2, Edit } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useState, useEffect } from 'react';
+import { AppSidebar } from '@/components/app-sidebar';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+import {
+  Grid,
+  List,
+  Plus,
+  Search,
+  Tag,
+  Trash2,
+  Edit,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +55,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,244 +65,557 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+// Remove this line:
+// import { toast } from "@/hooks/use-toast"
 
 interface Product {
-  id: number
-  name: string
-  price: number
-  category: string
-  stock: number
-  image: string
+  id: number;
+  Nama: string;
+  Harga: number;
+  Stok: number;
+  Category_id?: number;
+  category?: {
+    id: number;
+    Nama: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Category {
-  id: number
-  name: string
+  id: number;
+  Nama: string;
+  productCount?: number;
 }
 
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+interface ProductsResponse {
+  products: Product[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
+interface CategoriesResponse {
+  categories: Category[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
+// API configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export default function ProductsPage() {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false)
-  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
-  const [isEditProductOpen, setIsEditProductOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteCategoryDialogOpen, setIsDeleteCategoryDialogOpen] =
+    useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
+    null
+  );
+
+  // Loading states
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Data states
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 12,
+  });
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Form states
   const [productForm, setProductForm] = useState({
-    name: "",
-    price: "",
-    category: "",
-    stock: "",
-    image: null as File | null,
-  })
+    Nama: '',
+    Harga: '',
+    Stok: '',
+    Category_id: '',
+  });
   const [categoryForm, setCategoryForm] = useState({
-    name: "",
-  })
+    Nama: '',
+  });
 
-  // Mock data for products with images
-  const [products, setProducts] = useState<Product[]>([
-    {
-      id: 1,
-      name: "Nasi Goreng",
-      price: 15000,
-      category: "Makanan",
-      stock: 50,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 2,
-      name: "Es Teh",
-      price: 5000,
-      category: "Minuman",
-      stock: 100,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 3,
-      name: "Buku Tulis",
-      price: 7000,
-      category: "Alat Tulis",
-      stock: 200,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 4,
-      name: "Pensil 2B",
-      price: 3000,
-      category: "Alat Tulis",
-      stock: 150,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 5,
-      name: "Roti",
-      price: 8000,
-      category: "Makanan",
-      stock: 75,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 6,
-      name: "Air Mineral",
-      price: 4000,
-      category: "Minuman",
-      stock: 200,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 7,
-      name: "Penghapus",
-      price: 2000,
-      category: "Alat Tulis",
-      stock: 100,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 8,
-      name: "Mie Goreng",
-      price: 12000,
-      category: "Makanan",
-      stock: 40,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 9,
-      name: "Jus Jeruk",
-      price: 7000,
-      category: "Minuman",
-      stock: 80,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-    {
-      id: 10,
-      name: "Penggaris",
-      price: 5000,
-      category: "Alat Tulis",
-      stock: 120,
-      image: "/placeholder.svg?height=200&width=200",
-    },
-  ])
+  // Enhanced error handling
+  const handleApiError = (error: any, defaultMessage: string) => {
+    console.error('API Error:', error);
+    let errorMessage = defaultMessage;
 
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 1, name: "Makanan" },
-    { id: 2, name: "Minuman" },
-    { id: 3, name: "Alat Tulis" },
-  ])
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
 
-  // Extract unique categories for the filter
-  const uniqueCategories = [...new Set(products.map((product) => product.category))]
+    setError(errorMessage);
+    toast.error(errorMessage);
+  };
 
-  // Filtered products based on search query and selected category
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase())
+  // Product API functions with enhanced error handling
+  const fetchProducts = async (page = 1, search = '', categoryId = '') => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '12',
+        includeCategory: 'true',
+        ...(search && { search }),
+        ...(categoryId && categoryId !== 'all' && { category_id: categoryId }),
+      });
 
-      const matchesCategory =
-        selectedCategory === "all" || product.category.toLowerCase() === selectedCategory.toLowerCase()
+      const response = await fetch(`${API_BASE_URL}/products?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      return matchesSearch && matchesCategory
-    })
-  }, [products, searchQuery, selectedCategory])
-
-  const handleAddProduct = () => {
-    if (productForm.name && productForm.price && productForm.category && productForm.stock) {
-      const newProduct: Product = {
-        id: products.length + 1,
-        name: productForm.name,
-        price: Number.parseInt(productForm.price),
-        category: productForm.category,
-        stock: Number.parseInt(productForm.stock),
-        image: productForm.image ? URL.createObjectURL(productForm.image) : "/placeholder.svg?height=200&width=200",
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
       }
-      setProducts([...products, newProduct])
-      setProductForm({ name: "", price: "", category: "", stock: "", image: null })
-      setIsAddProductOpen(false)
-    }
-  }
 
-  const handleEditProduct = () => {
-    if (selectedProduct && productForm.name && productForm.price && productForm.category && productForm.stock) {
-      const updatedProducts = products.map((product) =>
-        product.id === selectedProduct.id
-          ? {
-              ...product,
-              name: productForm.name,
-              price: Number.parseInt(productForm.price),
-              category: productForm.category,
-              stock: Number.parseInt(productForm.stock),
-              image: productForm.image ? URL.createObjectURL(productForm.image) : product.image,
-            }
-          : product,
-      )
-      setProducts(updatedProducts)
-      setProductForm({ name: "", price: "", category: "", stock: "", image: null })
-      setSelectedProduct(null)
-      setIsEditProductOpen(false)
-    }
-  }
+      const data: ApiResponse<ProductsResponse> = await response.json();
 
-  const handleDeleteProduct = () => {
+      if (data.success) {
+        setProducts(data.data.products);
+        setPagination(data.data.pagination);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to fetch products');
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createProduct = async (productData: Omit<Product, 'id'>) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          Nama: productData.Nama,
+          Harga: productData.Harga,
+          Stok: productData.Stok,
+          Category_id: productData.Category_id || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create product');
+      }
+
+      if (data.success) {
+        await fetchProducts(currentPage, searchQuery, selectedCategoryFilter);
+        toast.success('Product created successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to create product');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateProduct = async (id: number, productData: Partial<Product>) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          Nama: productData.Nama,
+          Harga: productData.Harga,
+          Stok: productData.Stok,
+          Category_id: productData.Category_id || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update product');
+      }
+
+      if (data.success) {
+        await fetchProducts(currentPage, searchQuery, selectedCategoryFilter);
+        toast.success('Product updated successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to update product');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const deleteProduct = async (id: number) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete product');
+      }
+
+      if (data.success) {
+        await fetchProducts(currentPage, searchQuery, selectedCategoryFilter);
+        toast.success('Product deleted successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to delete product');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Category API functions
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories?limit=100`);
+      if (response.ok) {
+        const data: ApiResponse<CategoriesResponse> = await response.json();
+        if (data.success) {
+          setCategories(data.data.categories);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
+  const createCategory = async (categoryData: { Nama: string }) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(categoryData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create category');
+      }
+
+      if (data.success) {
+        await fetchCategories();
+        toast.success('Category created successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to create category');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const updateCategory = async (id: number, categoryData: { Nama: string }) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(categoryData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update category');
+      }
+
+      if (data.success) {
+        await fetchCategories();
+        toast.success('Category updated successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to update category');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const deleteCategory = async (id: number, force = false) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/categories/${id}?force=${force}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete category');
+      }
+
+      if (data.success) {
+        await fetchCategories();
+        await fetchProducts(currentPage, searchQuery, selectedCategoryFilter);
+        toast.success('Category deleted successfully');
+        return true;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err) {
+      handleApiError(err, 'Failed to delete category');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Effects
+  useEffect(() => {
+    fetchProducts(1, '', 'all');
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      setCurrentPage(1);
+      fetchProducts(1, searchQuery, selectedCategoryFilter);
+    }, 300);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery, selectedCategoryFilter]);
+
+  // Form validation
+  const validateProductForm = () => {
+    if (!productForm.Nama.trim()) {
+      toast.error('Product name is required');
+      return false;
+    }
+    if (!productForm.Harga || Number.parseFloat(productForm.Harga) <= 0) {
+      toast.error('Valid price is required');
+      return false;
+    }
+    if (!productForm.Stok || Number.parseInt(productForm.Stok) < 0) {
+      toast.error('Valid stock quantity is required');
+      return false;
+    }
+    return true;
+  };
+
+  // Handler functions for products
+  const handleAddProduct = async () => {
+    if (!validateProductForm()) return;
+
+    const success = await createProduct({
+      Nama: productForm.Nama.trim(),
+      Harga: Number.parseFloat(productForm.Harga),
+      Stok: Number.parseInt(productForm.Stok),
+      Category_id:
+        productForm.Category_id === 'none' || !productForm.Category_id
+          ? undefined
+          : Number.parseInt(productForm.Category_id),
+    });
+
+    if (success) {
+      setProductForm({ Nama: '', Harga: '', Stok: '', Category_id: '' });
+      setIsAddProductOpen(false);
+    }
+  };
+
+  const handleEditProduct = async () => {
+    if (!selectedProduct || !validateProductForm()) return;
+
+    const success = await updateProduct(selectedProduct.id, {
+      Nama: productForm.Nama.trim(),
+      Harga: Number.parseFloat(productForm.Harga),
+      Stok: Number.parseInt(productForm.Stok),
+      Category_id:
+        productForm.Category_id === 'none' || !productForm.Category_id
+          ? undefined
+          : Number.parseInt(productForm.Category_id),
+    });
+
+    if (success) {
+      setProductForm({ Nama: '', Harga: '', Stok: '', Category_id: '' });
+      setSelectedProduct(null);
+      setIsEditProductOpen(false);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
     if (productToDelete) {
-      setProducts(products.filter((product) => product.id !== productToDelete.id))
-      setProductToDelete(null)
-      setIsDeleteDialogOpen(false)
-    }
-  }
-
-  const handleAddCategory = () => {
-    if (categoryForm.name) {
-      const newCategory: Category = {
-        id: categories.length + 1,
-        name: categoryForm.name,
+      const success = await deleteProduct(productToDelete.id);
+      if (success) {
+        setProductToDelete(null);
+        setIsDeleteDialogOpen(false);
       }
-      setCategories([...categories, newCategory])
-      setCategoryForm({ name: "" })
-      setIsAddCategoryOpen(false)
     }
-  }
+  };
+
+  // Handler functions for categories
+  const handleAddCategory = async () => {
+    if (!categoryForm.Nama.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    const success = await createCategory({
+      Nama: categoryForm.Nama.trim(),
+    });
+
+    if (success) {
+      setCategoryForm({ Nama: '' });
+      setIsAddCategoryOpen(false);
+    }
+  };
+
+  const handleEditCategory = async () => {
+    if (!selectedCategory || !categoryForm.Nama.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    const success = await updateCategory(selectedCategory.id, {
+      Nama: categoryForm.Nama.trim(),
+    });
+
+    if (success) {
+      setCategoryForm({ Nama: '' });
+      setSelectedCategory(null);
+      setIsEditCategoryOpen(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (categoryToDelete) {
+      const success = await deleteCategory(categoryToDelete.id, true);
+      if (success) {
+        setCategoryToDelete(null);
+        setIsDeleteCategoryDialogOpen(false);
+      }
+    }
+  };
 
   const openEditDialog = (product: Product) => {
-    setSelectedProduct(product)
+    setSelectedProduct(product);
     setProductForm({
-      name: product.name,
-      price: product.price.toString(),
-      category: product.category,
-      stock: product.stock.toString(),
-      image: null,
-    })
-    setIsEditProductOpen(true)
-  }
+      Nama: product.Nama,
+      Harga: product.Harga.toString(),
+      Stok: product.Stok.toString(),
+      Category_id: product.Category_id?.toString() || '',
+    });
+    setIsEditProductOpen(true);
+  };
 
   const openDeleteDialog = (product: Product) => {
-    setProductToDelete(product)
-    setIsDeleteDialogOpen(true)
-  }
+    setProductToDelete(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const openEditCategoryDialog = (category: Category) => {
+    setSelectedCategory(category);
+    setCategoryForm({
+      Nama: category.Nama,
+    });
+    setIsEditCategoryOpen(true);
+  };
+
+  const openDeleteCategoryDialog = (category: Category) => {
+    setCategoryToDelete(category);
+    setIsDeleteCategoryDialogOpen(true);
+  };
 
   const resetProductForm = () => {
-    setProductForm({ name: "", price: "", category: "", stock: "", image: null })
-  }
+    setProductForm({ Nama: '', Harga: '', Stok: '', Category_id: '' });
+  };
 
   const resetCategoryForm = () => {
-    setCategoryForm({ name: "" })
-  }
+    setCategoryForm({ Nama: '' });
+  };
 
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value)
-  }
+    setSelectedCategoryFilter(value);
+  };
 
   const clearFilters = () => {
-    setSearchQuery("")
-    setSelectedCategory("all")
-  }
+    setSearchQuery('');
+    setSelectedCategoryFilter('all');
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchProducts(page, searchQuery, selectedCategoryFilter);
+  };
 
   return (
     <SidebarProvider>
@@ -276,7 +624,10 @@ export default function ProductsPage() {
         <header className="flex h-16 shrink-0 items-center border-b px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-6" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-6"
+            />
             <h1 className="text-lg font-semibold">Product Management</h1>
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -293,33 +644,60 @@ export default function ProductsPage() {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" className="h-9" onClick={() => setIsAddProductOpen(true)}>
+              <Button
+                size="sm"
+                className="h-9"
+                onClick={() => setIsAddProductOpen(true)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
-              <Button variant="outline" size="sm" className="h-9" onClick={() => setIsAddCategoryOpen(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={() => setIsAddCategoryOpen(true)}
+              >
                 <Tag className="mr-2 h-4 w-4" />
                 Add Category
               </Button>
-              {(searchQuery || selectedCategory !== "all") && (
-                <Button variant="outline" size="sm" className="h-9" onClick={clearFilters}>
+              {(searchQuery || selectedCategoryFilter !== 'all') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={clearFilters}
+                >
                   Clear Filters
                 </Button>
               )}
             </div>
 
             <div className="flex items-center gap-2">
-              <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+              <Select
+                value={selectedCategoryFilter}
+                onValueChange={handleCategoryChange}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {uniqueCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  {categories.map((category) => (
+                    <SelectItem
+                      key={category.id}
+                      value={category.id.toString()}
+                    >
+                      {category.Nama}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -328,7 +706,9 @@ export default function ProductsPage() {
               <ToggleGroup
                 type="single"
                 value={viewMode}
-                onValueChange={(value) => value && setViewMode(value as "grid" | "list")}
+                onValueChange={(value) =>
+                  value && setViewMode(value as 'grid' | 'list')
+                }
               >
                 <ToggleGroupItem value="grid" aria-label="Grid view">
                   <Grid className="h-4 w-4" />
@@ -340,40 +720,90 @@ export default function ProductsPage() {
             </div>
           </div>
 
+          {/* Categories Management Section */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Categories</CardTitle>
+              <CardDescription>
+                Manage product categories ({categories.length} total)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="flex items-center gap-2 rounded-lg border p-2"
+                  >
+                    <Badge variant="outline">{category.Nama}</Badge>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditCategoryDialog(category)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteCategoryDialog(category)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Products</CardTitle>
               <CardDescription>
                 Manage products, categories, and inventory
-                {filteredProducts.length !== products.length && (
-                  <span className="ml-2 text-sm">
-                    (Showing {filteredProducts.length} of {products.length} products)
-                  </span>
-                )}
+                <span className="ml-2 text-sm">
+                  (Showing {products.length} of {pagination.totalItems}{' '}
+                  products)
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {filteredProducts.length === 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground">
+                    Loading products...
+                  </p>
+                </div>
+              ) : products.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium text-muted-foreground mb-2">No products found</h3>
+                  <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                    No products found
+                  </h3>
                   <p className="text-sm text-muted-foreground text-center max-w-sm">
-                    {searchQuery || selectedCategory !== "all"
-                      ? "Try adjusting your search or filter criteria"
-                      : "Start by adding your first product"}
+                    {searchQuery || selectedCategoryFilter !== 'all'
+                      ? 'Try adjusting your search or filter criteria'
+                      : 'Start by adding your first product'}
                   </p>
-                  {(searchQuery || selectedCategory !== "all") && (
-                    <Button variant="outline" size="sm" className="mt-4" onClick={clearFilters}>
+                  {(searchQuery || selectedCategoryFilter !== 'all') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                      onClick={clearFilters}
+                    >
                       Clear Filters
                     </Button>
                   )}
                 </div>
-              ) : viewMode === "list" ? (
+              ) : viewMode === 'list' ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>Image</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
@@ -382,41 +812,50 @@ export default function ProductsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts.map((product) => (
+                    {products.map((product) => (
                       <TableRow key={product.id}>
                         <TableCell>{product.id}</TableCell>
-                        <TableCell>
-                          <img
-                            src={product.image || "/placeholder.svg"}
-                            alt={product.name}
-                            className="h-10 w-10 rounded-md object-cover"
-                          />
+                        <TableCell className="font-medium">
+                          {product.Nama}
                         </TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                            {product.category}
-                          </span>
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-100 text-blue-800"
+                          >
+                            {product.category?.Nama || 'Uncategorized'}
+                          </Badge>
                         </TableCell>
-                        <TableCell>Rp {product.price.toLocaleString()}</TableCell>
                         <TableCell>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              product.stock > 50
-                                ? "bg-green-100 text-green-800"
-                                : product.stock > 20
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                          Rp {product.Harga.toLocaleString('id-ID')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`${
+                              product.Stok > 50
+                                ? 'bg-green-100 text-green-800'
+                                : product.Stok > 20
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {product.stock}
-                          </span>
+                            {product.Stok}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(product)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(product)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(product)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(product)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -426,24 +865,27 @@ export default function ProductsPage() {
                 </Table>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <Card key={product.id} className="overflow-hidden">
-                      <div className="aspect-square w-full">
-                        <img
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
+                      <div className="aspect-square w-full bg-gray-100 flex items-center justify-center">
+                        <div className="text-4xl font-bold text-gray-400">
+                          {product.Nama.charAt(0).toUpperCase()}
+                        </div>
                       </div>
                       <CardHeader className="p-4">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-base">{product.name}</CardTitle>
-                          <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                            {product.category}
+                          <CardTitle className="text-base">
+                            {product.Nama}
+                          </CardTitle>
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-100 text-blue-800"
+                          >
+                            {product.category?.Nama || 'Uncategorized'}
                           </Badge>
                         </div>
                         <CardDescription className="mt-1 text-lg font-semibold">
-                          Rp {product.price.toLocaleString()}
+                          Rp {product.Harga.toLocaleString('id-ID')}
                         </CardDescription>
                       </CardHeader>
                       <CardFooter className="flex items-center justify-between border-t p-4 pt-2">
@@ -451,21 +893,29 @@ export default function ProductsPage() {
                           <Badge
                             variant="outline"
                             className={`${
-                              product.stock > 50
-                                ? "bg-green-100 text-green-800"
-                                : product.stock > 20
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                              product.Stok > 50
+                                ? 'bg-green-100 text-green-800'
+                                : product.Stok > 20
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            Stock: {product.stock}
+                            Stock: {product.Stok}
                           </Badge>
                         </div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(product)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(product)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(product)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(product)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -475,24 +925,67 @@ export default function ProductsPage() {
                 </div>
               )}
 
-              {filteredProducts.length > 0 && (
+              {products.length > 0 && (
                 <div className="mt-4 flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Showing <span className="font-medium">1</span> to{" "}
-                    <span className="font-medium">{Math.min(10, filteredProducts.length)}</span> of{" "}
-                    <span className="font-medium">{filteredProducts.length}</span> results
+                    Showing{' '}
+                    <span className="font-medium">
+                      {(pagination.currentPage - 1) * pagination.itemsPerPage +
+                        1}
+                    </span>{' '}
+                    to{' '}
+                    <span className="font-medium">
+                      {Math.min(
+                        pagination.currentPage * pagination.itemsPerPage,
+                        pagination.totalItems
+                      )}
+                    </span>{' '}
+                    of{' '}
+                    <span className="font-medium">{pagination.totalItems}</span>{' '}
+                    results
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" disabled>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pagination.currentPage === 1}
+                      onClick={() =>
+                        handlePageChange(pagination.currentPage - 1)
+                      }
+                    >
                       Previous
                     </Button>
-                    <Button variant="outline" size="sm" className="px-4">
-                      1
-                    </Button>
-                    <Button variant="outline" size="sm" className="px-4">
-                      2
-                    </Button>
-                    <Button variant="outline" size="sm">
+                    {Array.from(
+                      { length: Math.min(5, pagination.totalPages) },
+                      (_, i) => {
+                        const page = i + 1;
+                        return (
+                          <Button
+                            key={page}
+                            variant={
+                              pagination.currentPage === page
+                                ? 'default'
+                                : 'outline'
+                            }
+                            size="sm"
+                            className="px-4"
+                            onClick={() => handlePageChange(page)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      }
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        pagination.currentPage === pagination.totalPages
+                      }
+                      onClick={() =>
+                        handlePageChange(pagination.currentPage + 1)
+                      }
+                    >
                       Next
                     </Button>
                   </div>
@@ -501,225 +994,396 @@ export default function ProductsPage() {
             </CardContent>
           </Card>
         </main>
+
+        {/* Add Product Dialog */}
+        <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Product</DialogTitle>
+              <DialogDescription>
+                Enter the details for the new product
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="product-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="product-name"
+                  className="col-span-3"
+                  value={productForm.Nama}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Nama: e.target.value })
+                  }
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="product-price" className="text-right">
+                  Price (Rp)
+                </Label>
+                <Input
+                  id="product-price"
+                  type="number"
+                  className="col-span-3"
+                  value={productForm.Harga}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Harga: e.target.value })
+                  }
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="product-stock" className="text-right">
+                  Stock
+                </Label>
+                <Input
+                  id="product-stock"
+                  type="number"
+                  className="col-span-3"
+                  value={productForm.Stok}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Stok: e.target.value })
+                  }
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="product-category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  value={productForm.Category_id}
+                  onValueChange={(value) =>
+                    setProductForm({ ...productForm, Category_id: value })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem
+                        key={category.id}
+                        value={category.id.toString()}
+                      >
+                        {category.Nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAddProductOpen(false);
+                  resetProductForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddProduct} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  'Add Product'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+              <DialogDescription>Update the product details</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-product-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-product-name"
+                  className="col-span-3"
+                  value={productForm.Nama}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Nama: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-product-price" className="text-right">
+                  Price (Rp)
+                </Label>
+                <Input
+                  id="edit-product-price"
+                  type="number"
+                  className="col-span-3"
+                  value={productForm.Harga}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Harga: e.target.value })
+                  }
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-product-stock" className="text-right">
+                  Stock
+                </Label>
+                <Input
+                  id="edit-product-stock"
+                  type="number"
+                  className="col-span-3"
+                  value={productForm.Stok}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, Stok: e.target.value })
+                  }
+                  min="0"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-product-category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  value={productForm.Category_id}
+                  onValueChange={(value) =>
+                    setProductForm({ ...productForm, Category_id: value })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem
+                        key={category.id}
+                        value={category.id.toString()}
+                      >
+                        {category.Nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditProductOpen(false);
+                  setSelectedProduct(null);
+                  resetProductForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEditProduct} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Product'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Category Dialog */}
+        <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Category</DialogTitle>
+              <DialogDescription>
+                Enter the name for the new category
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="category-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="category-name"
+                  className="col-span-3"
+                  value={categoryForm.Nama}
+                  onChange={(e) =>
+                    setCategoryForm({ ...categoryForm, Nama: e.target.value })
+                  }
+                  placeholder="Enter category name"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAddCategoryOpen(false);
+                  resetCategoryForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddCategory} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  'Add Category'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Category Dialog */}
+        <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Category</DialogTitle>
+              <DialogDescription>Update the category name</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-category-name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  id="edit-category-name"
+                  className="col-span-3"
+                  value={categoryForm.Nama}
+                  onChange={(e) =>
+                    setCategoryForm({ ...categoryForm, Nama: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditCategoryOpen(false);
+                  setSelectedCategory(null);
+                  resetCategoryForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEditCategory} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Category'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Product Confirmation Dialog */}
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                product "{productToDelete?.Nama}" from the inventory.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setProductToDelete(null);
+                }}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteProduct}
+                disabled={isSubmitting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Product'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Category Confirmation Dialog */}
+        <AlertDialog
+          open={isDeleteCategoryDialogOpen}
+          onOpenChange={setIsDeleteCategoryDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                category "{categoryToDelete?.Nama}" and all products in this
+                category will become uncategorized.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setIsDeleteCategoryDialogOpen(false);
+                  setCategoryToDelete(null);
+                }}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteCategory}
+                disabled={isSubmitting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Category'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarInset>
-
-      {/* Add Product Dialog */}
-      <Dialog
-        open={isAddProductOpen}
-        onOpenChange={(open) => {
-          setIsAddProductOpen(open)
-          if (!open) resetProductForm()
-        }}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Add a new product to your inventory. Fill in all the required information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="product-name">Product Name</Label>
-              <Input
-                id="product-name"
-                value={productForm.name}
-                onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                placeholder="Enter product name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="product-price">Price (Rp)</Label>
-              <Input
-                id="product-price"
-                type="number"
-                value={productForm.price}
-                onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                placeholder="Enter price"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="product-category">Category</Label>
-              <Select
-                value={productForm.category}
-                onValueChange={(value) => setProductForm({ ...productForm, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="product-stock">Stock</Label>
-              <Input
-                id="product-stock"
-                type="number"
-                value={productForm.stock}
-                onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                placeholder="Enter stock quantity"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="product-image">Product Image</Label>
-              <Input
-                id="product-image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setProductForm({ ...productForm, image: e.target.files?.[0] || null })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddProductOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddProduct}>Add Product</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Product Dialog */}
-      <Dialog
-        open={isEditProductOpen}
-        onOpenChange={(open) => {
-          setIsEditProductOpen(open)
-          if (!open) {
-            resetProductForm()
-            setSelectedProduct(null)
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>Update the product information. Fill in all the required fields.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-product-name">Product Name</Label>
-              <Input
-                id="edit-product-name"
-                value={productForm.name}
-                onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                placeholder="Enter product name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-product-price">Price (Rp)</Label>
-              <Input
-                id="edit-product-price"
-                type="number"
-                value={productForm.price}
-                onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                placeholder="Enter price"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-product-category">Category</Label>
-              <Select
-                value={productForm.category}
-                onValueChange={(value) => setProductForm({ ...productForm, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-product-stock">Stock</Label>
-              <Input
-                id="edit-product-stock"
-                type="number"
-                value={productForm.stock}
-                onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                placeholder="Enter stock quantity"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-product-image">Product Image (optional)</Label>
-              <Input
-                id="edit-product-image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setProductForm({ ...productForm, image: e.target.files?.[0] || null })}
-              />
-              <p className="text-xs text-muted-foreground">Leave empty to keep current image</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditProductOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditProduct}>Update Product</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Category Dialog */}
-      <Dialog
-        open={isAddCategoryOpen}
-        onOpenChange={(open) => {
-          setIsAddCategoryOpen(open)
-          if (!open) resetCategoryForm()
-        }}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
-            <DialogDescription>Create a new product category for better organization.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="category-name">Category Name</Label>
-              <Input
-                id="category-name"
-                value={categoryForm.name}
-                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                placeholder="Enter category name"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddCategory}>Add Category</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the product "{productToDelete?.name}" from your
-              inventory.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProduct} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </SidebarProvider>
-  )
+  );
 }

@@ -5,6 +5,7 @@ __pycache__/
 # Virtual environment
 venv/
 env/
+Python/
 
 # IDE/editor config
 .vscode/
@@ -23,3 +24,6 @@ detected_result.png
 
 # Weights
 *.pt
+
+
+.Python

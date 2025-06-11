@@ -1,8 +1,8 @@
 // controllers/authController.js
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { User, Role } = require("../models");
-const { Op } = require("sequelize");
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { User, Role } = require('../models');
+const { Op } = require('sequelize');
 
 // Helper function to generate JWT token
 const generateToken = (user) => {
@@ -12,8 +12,8 @@ const generateToken = (user) => {
       username: user.username,
       role: user.role?.name,
     },
-    process.env.JWT_SECRET || "your-secret-key",
-    { expiresIn: "24h" }
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '24h' }
   );
 };
 
@@ -50,17 +50,17 @@ const authController = {
           .response(
             createResponse(
               false,
-              "Username, email, NIS, or NISN already registered"
+              'Username, email, NIS, or NISN already registered'
             )
           )
           .code(409);
       }
 
       // Get student role
-      const studentRole = await Role.findOne({ where: { name: "student" } });
+      const studentRole = await Role.findOne({ where: { name: 'student' } });
       if (!studentRole) {
         return h
-          .response(createResponse(false, "Student role not found"))
+          .response(createResponse(false, 'Student role not found'))
           .code(500);
       }
 
@@ -81,24 +81,24 @@ const authController = {
 
       // Get user with role for response
       const userWithRole = await User.findByPk(newUser.id, {
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password", "PIN"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password', 'PIN'] },
       });
 
       const token = generateToken(userWithRole);
 
       return h
         .response(
-          createResponse(true, "Student registered successfully", {
+          createResponse(true, 'Student registered successfully', {
             user: userWithRole,
             token,
           })
         )
         .code(201);
     } catch (error) {
-      console.error("Error in registerSiswa:", error);
+      console.error('Error in registerSiswa:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -118,16 +118,16 @@ const authController = {
       if (existingUser) {
         return h
           .response(
-            createResponse(false, "Username or email already registered")
+            createResponse(false, 'Username or email already registered')
           )
           .code(409);
       }
 
       // Get teacher role
-      const teacherRole = await Role.findOne({ where: { name: "teacher" } });
+      const teacherRole = await Role.findOne({ where: { name: 'teacher' } });
       if (!teacherRole) {
         return h
-          .response(createResponse(false, "Teacher role not found"))
+          .response(createResponse(false, 'Teacher role not found'))
           .code(500);
       }
 
@@ -143,24 +143,24 @@ const authController = {
 
       // Get user with role for response
       const userWithRole = await User.findByPk(newUser.id, {
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password'] },
       });
 
       const token = generateToken(userWithRole);
 
       return h
         .response(
-          createResponse(true, "Teacher registered successfully", {
+          createResponse(true, 'Teacher registered successfully', {
             user: userWithRole,
             token,
           })
         )
         .code(201);
     } catch (error) {
-      console.error("Error in registerGuru:", error);
+      console.error('Error in registerGuru:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -179,16 +179,16 @@ const authController = {
             { NISN: identifier },
           ],
         },
-        include: [{ model: Role, as: "role" }],
+        include: [{ model: Role, as: 'role' }],
       });
 
-      if (!user || user.role.name !== "student") {
-        return h.response(createResponse(false, "Student not found")).code(401);
+      if (!user || user.role.name !== 'student') {
+        return h.response(createResponse(false, 'Student not found')).code(401);
       }
 
       if (!user.is_active) {
         return h
-          .response(createResponse(false, "Account is inactive"))
+          .response(createResponse(false, 'Account is inactive'))
           .code(401);
       }
 
@@ -202,7 +202,7 @@ const authController = {
 
       if (!isValid) {
         return h
-          .response(createResponse(false, "Invalid password or PIN"))
+          .response(createResponse(false, 'Invalid password or PIN'))
           .code(401);
       }
 
@@ -215,16 +215,16 @@ const authController = {
 
       return h
         .response(
-          createResponse(true, "Login successful", {
+          createResponse(true, 'Login successful', {
             user: userResponse,
             token,
           })
         )
         .code(200);
     } catch (error) {
-      console.error("Error in loginSiswa:", error);
+      console.error('Error in loginSiswa:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -239,23 +239,23 @@ const authController = {
         where: {
           [Op.or]: [{ username: identifier }, { email: identifier }],
         },
-        include: [{ model: Role, as: "role" }],
+        include: [{ model: Role, as: 'role' }],
       });
 
-      if (!user || user.role.name !== "teacher") {
-        return h.response(createResponse(false, "Teacher not found")).code(401);
+      if (!user || user.role.name !== 'teacher') {
+        return h.response(createResponse(false, 'Teacher not found')).code(401);
       }
 
       if (!user.is_active) {
         return h
-          .response(createResponse(false, "Account is inactive"))
+          .response(createResponse(false, 'Account is inactive'))
           .code(401);
       }
 
       // Verify password
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
-        return h.response(createResponse(false, "Invalid password")).code(401);
+        return h.response(createResponse(false, 'Invalid password')).code(401);
       }
 
       const token = generateToken(user);
@@ -266,16 +266,16 @@ const authController = {
 
       return h
         .response(
-          createResponse(true, "Login successful", {
+          createResponse(true, 'Login successful', {
             user: userResponse,
             token,
           })
         )
         .code(200);
     } catch (error) {
-      console.error("Error in loginGuru:", error);
+      console.error('Error in loginGuru:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -290,11 +290,11 @@ const authController = {
       // Find student
       const user = await User.findOne({
         where: { id },
-        include: [{ model: Role, as: "role" }],
+        include: [{ model: Role, as: 'role' }],
       });
 
-      if (!user || user.role.name !== "student") {
-        return h.response(createResponse(false, "Student not found")).code(404);
+      if (!user || user.role.name !== 'student') {
+        return h.response(createResponse(false, 'Student not found')).code(404);
       }
 
       // Check for duplicate unique fields (excluding current user)
@@ -317,7 +317,7 @@ const authController = {
             .response(
               createResponse(
                 false,
-                "Username, email, NIS, NISN, or NFC ID already in use"
+                'Username, email, NIS, NISN, or NFC ID already in use'
               )
             )
             .code(409);
@@ -340,23 +340,23 @@ const authController = {
 
       // Get updated user data
       const updatedUser = await User.findByPk(id, {
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password", "PIN"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password', 'PIN'] },
       });
 
       return h
         .response(
           createResponse(
             true,
-            "Student account updated successfully",
+            'Student account updated successfully',
             updatedUser
           )
         )
         .code(200);
     } catch (error) {
-      console.error("Error in updateSiswaAccount:", error);
+      console.error('Error in updateSiswaAccount:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -370,11 +370,11 @@ const authController = {
       // Find teacher
       const user = await User.findOne({
         where: { id },
-        include: [{ model: Role, as: "role" }],
+        include: [{ model: Role, as: 'role' }],
       });
 
-      if (!user || user.role.name !== "teacher") {
-        return h.response(createResponse(false, "Teacher not found")).code(404);
+      if (!user || user.role.name !== 'teacher') {
+        return h.response(createResponse(false, 'Teacher not found')).code(404);
       }
 
       // Check for duplicate unique fields (excluding current user)
@@ -390,7 +390,7 @@ const authController = {
 
         if (duplicateCheck) {
           return h
-            .response(createResponse(false, "Username or email already in use"))
+            .response(createResponse(false, 'Username or email already in use'))
             .code(409);
         }
       }
@@ -406,23 +406,23 @@ const authController = {
 
       // Get updated user data
       const updatedUser = await User.findByPk(id, {
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password'] },
       });
 
       return h
         .response(
           createResponse(
             true,
-            "Teacher account updated successfully",
+            'Teacher account updated successfully',
             updatedUser
           )
         )
         .code(200);
     } catch (error) {
-      console.error("Error in updateGuruAccount:", error);
+      console.error('Error in updateGuruAccount:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -434,23 +434,23 @@ const authController = {
 
       const teacher = await User.findOne({
         where: { id },
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password'] },
       });
 
-      if (!teacher || teacher.role.name !== "teacher") {
-        return h.response(createResponse(false, "Teacher not found")).code(404);
+      if (!teacher || teacher.role.name !== 'teacher') {
+        return h.response(createResponse(false, 'Teacher not found')).code(404);
       }
 
       return h
         .response(
-          createResponse(true, "Teacher data retrieved successfully", teacher)
+          createResponse(true, 'Teacher data retrieved successfully', teacher)
         )
         .code(200);
     } catch (error) {
-      console.error("Error in getGuruById:", error);
+      console.error('Error in getGuruById:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -458,14 +458,14 @@ const authController = {
   // 8. Get All Teachers
   getAllGuru: async (request, h) => {
     try {
-      const { page = 1, limit = 10, search = "" } = request.query;
+      const { page = 1, limit = 10, search = '' } = request.query;
       const offset = (page - 1) * limit;
 
       // Get teacher role
-      const teacherRole = await Role.findOne({ where: { name: "teacher" } });
+      const teacherRole = await Role.findOne({ where: { name: 'teacher' } });
       if (!teacherRole) {
         return h
-          .response(createResponse(false, "Teacher role not found"))
+          .response(createResponse(false, 'Teacher role not found'))
           .code(500);
       }
 
@@ -484,18 +484,18 @@ const authController = {
 
       const { count, rows } = await User.findAndCountAll({
         where: whereClause,
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password'] },
         limit,
         offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
       });
 
       const totalPages = Math.ceil(count / limit);
 
       return h
         .response(
-          createResponse(true, "Teachers data retrieved successfully", {
+          createResponse(true, 'Teachers data retrieved successfully', {
             teachers: rows,
             pagination: {
               currentPage: page,
@@ -507,9 +507,9 @@ const authController = {
         )
         .code(200);
     } catch (error) {
-      console.error("Error in getAllGuru:", error);
+      console.error('Error in getAllGuru:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -521,23 +521,23 @@ const authController = {
 
       const student = await User.findOne({
         where: { id },
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password", "PIN"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password', 'PIN'] },
       });
 
-      if (!student || student.role.name !== "student") {
-        return h.response(createResponse(false, "Student not found")).code(404);
+      if (!student || student.role.name !== 'student') {
+        return h.response(createResponse(false, 'Student not found')).code(404);
       }
 
       return h
         .response(
-          createResponse(true, "Student data retrieved successfully", student)
+          createResponse(true, 'Student data retrieved successfully', student)
         )
         .code(200);
     } catch (error) {
-      console.error("Error in getSiswaById:", error);
+      console.error('Error in getSiswaById:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
@@ -545,14 +545,14 @@ const authController = {
   // 10. Get All Students
   getAllSiswa: async (request, h) => {
     try {
-      const { page = 1, limit = 10, search = "", gen } = request.query;
+      const { page = 1, limit = 10, search = '', gen } = request.query;
       const offset = (page - 1) * limit;
 
       // Get student role
-      const studentRole = await Role.findOne({ where: { name: "student" } });
+      const studentRole = await Role.findOne({ where: { name: 'student' } });
       if (!studentRole) {
         return h
-          .response(createResponse(false, "Student role not found"))
+          .response(createResponse(false, 'Student role not found'))
           .code(500);
       }
 
@@ -577,18 +577,18 @@ const authController = {
 
       const { count, rows } = await User.findAndCountAll({
         where: whereClause,
-        include: [{ model: Role, as: "role" }],
-        attributes: { exclude: ["password", "PIN"] },
+        include: [{ model: Role, as: 'role' }],
+        attributes: { exclude: ['password', 'PIN'] },
         limit,
         offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
       });
 
       const totalPages = Math.ceil(count / limit);
 
       return h
         .response(
-          createResponse(true, "Students data retrieved successfully", {
+          createResponse(true, 'Students data retrieved successfully', {
             students: rows,
             pagination: {
               currentPage: page,
@@ -600,9 +600,9 @@ const authController = {
         )
         .code(200);
     } catch (error) {
-      console.error("Error in getAllSiswa:", error);
+      console.error('Error in getAllSiswa:', error);
       return h
-        .response(createResponse(false, "Server error occurred", error.message))
+        .response(createResponse(false, 'Server error occurred', error.message))
         .code(500);
     }
   },
