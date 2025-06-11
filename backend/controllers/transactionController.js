@@ -7,9 +7,9 @@ const {
   Category,
   Role,
   sequelize, // Import sequelize instance from models
-} = require("../models");
-const { Op } = require("sequelize");
-const Boom = require("@hapi/boom");
+} = require('../models');
+const { Op } = require('sequelize');
+const Boom = require('@hapi/boom');
 
 const transactionController = {
   // 1. Create top-up transaction
@@ -23,30 +23,30 @@ const transactionController = {
       if (!customer_id || !amount || amount <= 0) {
         await t.rollback();
         return Boom.badRequest(
-          "Customer ID and amount are required and amount must be greater than 0"
+          'Customer ID and amount are required and amount must be greater than 0'
         );
       }
 
       // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: "role", where: { name: "student" } }],
+        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound("Student not found");
+        return Boom.notFound('Student not found');
       }
 
       // Create top-up transaction
       const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: "topup",
+          Transaction_type: 'topup',
           total_amount: amount,
-          Note: note || "Top-up balance",
-          status: "completed",
+          Note: note || 'Top-up balance',
+          status: 'completed',
         },
         { transaction: t }
       );
@@ -60,7 +60,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Top-up successful",
+          message: 'Top-up successful',
           data: {
             transaction,
             new_balance: newBalance,
@@ -69,8 +69,8 @@ const transactionController = {
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error("Error creating topup transaction:", error);
-      return Boom.internal("Failed to process top-up");
+      console.error('Error creating topup transaction:', error);
+      return Boom.internal('Failed to process top-up');
     }
   },
 
@@ -89,19 +89,19 @@ const transactionController = {
         items.length === 0
       ) {
         await t.rollback();
-        return Boom.badRequest("Customer ID and items are required");
+        return Boom.badRequest('Customer ID and items are required');
       }
 
       // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: "role", where: { name: "student" } }],
+        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound("Student not found");
+        return Boom.notFound('Student not found');
       }
 
       let totalAmount = 0;
@@ -114,7 +114,7 @@ const transactionController = {
         if (!product_id || !amount || amount <= 0) {
           await t.rollback();
           return Boom.badRequest(
-            "Product ID and amount are required for each item"
+            'Product ID and amount are required for each item'
           );
         }
 
@@ -155,10 +155,10 @@ const transactionController = {
       const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: "purchase",
+          Transaction_type: 'purchase',
           total_amount: totalAmount,
-          Note: note || "Product purchase",
-          status: "completed",
+          Note: note || 'Product purchase',
+          status: 'completed',
         },
         { transaction: t }
       );
@@ -192,7 +192,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Purchase successful",
+          message: 'Purchase successful',
           data: {
             transaction,
             items: purchaseDetails.map((d) => ({
@@ -208,8 +208,8 @@ const transactionController = {
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error("Error creating purchase transaction:", error);
-      return Boom.internal("Failed to process purchase");
+      console.error('Error creating purchase transaction:', error);
+      return Boom.internal('Failed to process purchase');
     }
   },
 
@@ -224,30 +224,30 @@ const transactionController = {
       if (!customer_id || !amount || amount <= 0) {
         await t.rollback();
         return Boom.badRequest(
-          "Customer ID and amount are required and amount must be greater than 0"
+          'Customer ID and amount are required and amount must be greater than 0'
         );
       }
 
       // Find user and verify student role
       const user = await User.findOne({
         where: { id: customer_id },
-        include: [{ model: Role, as: "role", where: { name: "student" } }],
+        include: [{ model: Role, as: 'role', where: { name: 'student' } }],
         transaction: t,
       });
 
       if (!user) {
         await t.rollback();
-        return Boom.notFound("Student not found");
+        return Boom.notFound('Student not found');
       }
 
       // Create penalty transaction (deduct balance)
       const transaction = await Transaksi.create(
         {
           Customer_id: customer_id,
-          Transaction_type: "penalty",
+          Transaction_type: 'penalty',
           total_amount: amount,
-          Note: note || "Penalty/Deduction",
-          status: "completed",
+          Note: note || 'Penalty/Deduction',
+          status: 'completed',
         },
         { transaction: t }
       );
@@ -261,7 +261,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Penalty transaction successful",
+          message: 'Penalty transaction successful',
           data: {
             transaction,
             penalty_amount: amount,
@@ -271,8 +271,8 @@ const transactionController = {
         .code(201);
     } catch (error) {
       await t.rollback();
-      console.error("Error creating penalty transaction:", error);
-      return Boom.internal("Failed to create penalty transaction");
+      console.error('Error creating penalty transaction:', error);
+      return Boom.internal('Failed to create penalty transaction');
     }
   },
 
@@ -282,10 +282,10 @@ const transactionController = {
       const {
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        sortOrder = "DESC",
-        type = "all",
-        status = "all",
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+        type = 'all',
+        status = 'all',
         startDate,
         endDate,
       } = request.query;
@@ -294,12 +294,12 @@ const transactionController = {
       const whereClause = {};
 
       // Filter by transaction type
-      if (type !== "all") {
+      if (type !== 'all') {
         whereClause.Transaction_type = type;
       }
 
       // Filter by status
-      if (status !== "all") {
+      if (status !== 'all') {
         whereClause.status = status;
       }
 
@@ -315,9 +315,9 @@ const transactionController = {
         include: [
           {
             model: User,
-            as: "customer",
-            attributes: ["id", "Nama", "NIS", "NISN", "username"],
-            include: [{ model: Role, as: "role", attributes: ["name"] }],
+            as: 'customer',
+            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username'],
+            include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
         ],
         order: [[sortBy, sortOrder.toUpperCase()]],
@@ -330,7 +330,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Transaction data retrieved successfully",
+          message: 'Transaction data retrieved successfully',
           data: {
             transactions,
             pagination: {
@@ -345,8 +345,8 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting all transactions:", error);
-      return Boom.internal("Failed to retrieve transaction data");
+      console.error('Error getting all transactions:', error);
+      return Boom.internal('Failed to retrieve transaction data');
     }
   },
 
@@ -356,27 +356,27 @@ const transactionController = {
       const { id } = request.params;
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest("Invalid transaction ID");
+        return Boom.badRequest('Invalid transaction ID');
       }
 
       const transaction = await Transaksi.findByPk(parseInt(id), {
         include: [
           {
             model: User,
-            as: "customer",
-            attributes: ["id", "Nama", "NIS", "NISN", "username", "Balance"],
-            include: [{ model: Role, as: "role", attributes: ["name"] }],
+            as: 'customer',
+            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username', 'Balance'],
+            include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
           {
             model: Transaction_detail,
-            as: "details",
+            as: 'details',
             include: [
               {
                 model: Produk,
-                as: "product",
-                attributes: ["id", "Nama", "Harga"],
+                as: 'product',
+                attributes: ['id', 'Nama', 'Harga'],
                 include: [
-                  { model: Category, as: "category", attributes: ["Nama"] },
+                  { model: Category, as: 'category', attributes: ['Nama'] },
                 ],
               },
             ],
@@ -385,19 +385,19 @@ const transactionController = {
       });
 
       if (!transaction) {
-        return Boom.notFound("Transaction not found");
+        return Boom.notFound('Transaction not found');
       }
 
       return h
         .response({
           success: true,
-          message: "Transaction data retrieved successfully",
+          message: 'Transaction data retrieved successfully',
           data: transaction,
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting transaction by ID:", error);
-      return Boom.internal("Failed to retrieve transaction data");
+      console.error('Error getting transaction by ID:', error);
+      return Boom.internal('Failed to retrieve transaction data');
     }
   },
 
@@ -408,43 +408,55 @@ const transactionController = {
       const {
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        sortOrder = "DESC",
-        type = "all",
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+        type = 'all',
       } = request.query;
 
       if (!siswaId || isNaN(parseInt(siswaId))) {
-        return Boom.badRequest("Invalid student ID");
+        return Boom.badRequest('Invalid student ID');
       }
 
-      // Verify student exists and has student role
+      // Pisahkan verifikasi student dengan query transactions
+      // Pertama, cek apakah student dengan ID ini ada dan memiliki role student
       const student = await User.findOne({
         where: { id: parseInt(siswaId) },
-        include: [{ model: Role, as: "role", where: { name: "student" } }],
+        include: [
+          {
+            model: Role,
+            as: 'role',
+            where: { name: 'student' },
+            required: true, // Pastikan hanya user dengan role student
+          },
+        ],
       });
 
       if (!student) {
-        return Boom.notFound("Student not found");
+        return Boom.notFound('Student not found or user is not a student');
       }
 
       const offset = (page - 1) * parseInt(limit);
       const whereClause = { Customer_id: parseInt(siswaId) };
 
-      if (type !== "all") {
+      // Filter berdasarkan type jika bukan 'all'
+      if (type !== 'all') {
         whereClause.Transaction_type = type;
       }
 
+      // Query transactions terpisah tanpa filter role yang ketat
       const { count, rows: transactions } = await Transaksi.findAndCountAll({
         where: whereClause,
         include: [
           {
             model: Transaction_detail,
-            as: "details",
+            as: 'details',
+            required: false, // LEFT JOIN, tidak wajib ada detail
             include: [
               {
                 model: Produk,
-                as: "product",
-                attributes: ["id", "Nama", "Harga"],
+                as: 'product',
+                attributes: ['id', 'Nama', 'Harga'],
+                required: false, // LEFT JOIN, tidak wajib ada product
               },
             ],
           },
@@ -465,7 +477,7 @@ const transactionController = {
               id: student.id,
               nama: student.Nama,
               nis: student.NIS,
-              nisn: student.NISN,
+              nisn: student.NISN || null,
               balance: student.Balance,
             },
             transactions,
@@ -481,8 +493,10 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting transactions by student:", error);
-      return Boom.internal("Failed to retrieve student transactions");
+      console.error('Error getting transactions by student:', error);
+      console.error('Error details:', error.message);
+      console.error('Stack trace:', error.stack);
+      return Boom.internal('Failed to retrieve student transactions');
     }
   },
 
@@ -493,7 +507,7 @@ const transactionController = {
         startDate,
         endDate,
         siswaId,
-        type = "all",
+        type = 'all',
         page = 1,
         limit = 50,
       } = request.query;
@@ -514,7 +528,7 @@ const transactionController = {
       }
 
       // Transaction type filter
-      if (type !== "all") {
+      if (type !== 'all') {
         whereClause.Transaction_type = type;
       }
 
@@ -523,23 +537,23 @@ const transactionController = {
         include: [
           {
             model: User,
-            as: "customer",
-            attributes: ["id", "Nama", "NIS", "NISN"],
-            include: [{ model: Role, as: "role", attributes: ["name"] }],
+            as: 'customer',
+            attributes: ['id', 'Nama', 'NIS', 'NISN'],
+            include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
           {
             model: Transaction_detail,
-            as: "details",
+            as: 'details',
             include: [
               {
                 model: Produk,
-                as: "product",
-                attributes: ["id", "Nama", "Harga"],
+                as: 'product',
+                attributes: ['id', 'Nama', 'Harga'],
               },
             ],
           },
         ],
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
         limit: parseInt(limit),
         offset: offset,
       });
@@ -548,11 +562,11 @@ const transactionController = {
       const stats = await Transaksi.findAll({
         where: whereClause,
         attributes: [
-          "Transaction_type",
-          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
-          [sequelize.fn("SUM", sequelize.col("total_amount")), "total"],
+          'Transaction_type',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+          [sequelize.fn('SUM', sequelize.col('total_amount')), 'total'],
         ],
-        group: ["Transaction_type"],
+        group: ['Transaction_type'],
         raw: true,
       });
 
@@ -561,7 +575,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Transaction history retrieved successfully",
+          message: 'Transaction history retrieved successfully',
           data: {
             transactions,
             statistics: stats,
@@ -581,8 +595,8 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting transaction history:", error);
-      return Boom.internal("Failed to retrieve transaction history");
+      console.error('Error getting transaction history:', error);
+      return Boom.internal('Failed to retrieve transaction history');
     }
   },
 
@@ -592,30 +606,30 @@ const transactionController = {
       const { id } = request.params;
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest("Invalid transaction ID");
+        return Boom.badRequest('Invalid transaction ID');
       }
 
       const transaction = await Transaksi.findByPk(parseInt(id), {
         include: [
           {
             model: User,
-            as: "customer",
-            attributes: ["id", "Nama", "NIS", "NISN", "username", "Balance"],
-            include: [{ model: Role, as: "role", attributes: ["name"] }],
+            as: 'customer',
+            attributes: ['id', 'Nama', 'NIS', 'NISN', 'username', 'Balance'],
+            include: [{ model: Role, as: 'role', attributes: ['name'] }],
           },
           {
             model: Transaction_detail,
-            as: "details",
+            as: 'details',
             include: [
               {
                 model: Produk,
-                as: "product",
-                attributes: ["id", "Nama", "Harga", "Stok"],
+                as: 'product',
+                attributes: ['id', 'Nama', 'Harga', 'Stok'],
                 include: [
                   {
                     model: Category,
-                    as: "category",
-                    attributes: ["id", "Nama"],
+                    as: 'category',
+                    attributes: ['id', 'Nama'],
                   },
                 ],
               },
@@ -625,14 +639,14 @@ const transactionController = {
       });
 
       if (!transaction) {
-        return Boom.notFound("Transaction not found");
+        return Boom.notFound('Transaction not found');
       }
 
       // Format details for more readable response
       const formattedDetails =
         transaction.details?.map((detail) => ({
           product_id: detail.Product_id,
-          product_name: detail.product?.Nama || "Product not found",
+          product_name: detail.product?.Nama || 'Product not found',
           product_price: detail.product?.Harga || 0,
           category: detail.product?.category?.Nama || null,
           quantity: detail.amount,
@@ -644,7 +658,7 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Transaction details retrieved successfully",
+          message: 'Transaction details retrieved successfully',
           data: {
             transaction: {
               id: transaction.id,
@@ -677,8 +691,8 @@ const transactionController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting transaction details:", error);
-      return Boom.internal("Failed to retrieve transaction details");
+      console.error('Error getting transaction details:', error);
+      return Boom.internal('Failed to retrieve transaction details');
     }
   },
 
@@ -691,7 +705,7 @@ const transactionController = {
       const { reason } = request.payload || {};
 
       if (!id || isNaN(parseInt(id))) {
-        return Boom.badRequest("Invalid transaction ID");
+        return Boom.badRequest('Invalid transaction ID');
       }
 
       // Find transaction with details
@@ -699,12 +713,12 @@ const transactionController = {
         include: [
           {
             model: User,
-            as: "customer",
+            as: 'customer',
           },
           {
             model: Transaction_detail,
-            as: "details",
-            include: [{ model: Produk, as: "product" }],
+            as: 'details',
+            include: [{ model: Produk, as: 'product' }],
           },
         ],
         transaction: t,
@@ -712,13 +726,13 @@ const transactionController = {
 
       if (!transaction) {
         await t.rollback();
-        return Boom.notFound("Transaction not found");
+        return Boom.notFound('Transaction not found');
       }
 
       // Can't delete completed transaction without reversal
-      if (transaction.status === "completed") {
+      if (transaction.status === 'completed') {
         // For purchase transactions, restore product stock
-        if (transaction.Transaction_type === "purchase") {
+        if (transaction.Transaction_type === 'purchase') {
           for (const detail of transaction.details) {
             if (detail.product) {
               await detail.product.update(
@@ -736,11 +750,11 @@ const transactionController = {
         let newBalance = parseFloat(customer.Balance);
 
         switch (transaction.Transaction_type) {
-          case "topup":
+          case 'topup':
             newBalance -= parseFloat(transaction.total_amount);
             break;
-          case "purchase":
-          case "penalty":
+          case 'purchase':
+          case 'penalty':
             newBalance += parseFloat(transaction.total_amount);
             break;
         }
@@ -762,14 +776,14 @@ const transactionController = {
       return h
         .response({
           success: true,
-          message: "Transaction deleted successfully",
+          message: 'Transaction deleted successfully',
           data: {
             deleted_transaction_id: parseInt(id),
             transaction_type: transaction.Transaction_type,
             amount: transaction.total_amount,
-            reason: reason || "No reason provided",
+            reason: reason || 'No reason provided',
             customer_new_balance: transaction.customer
-              ? transaction.Transaction_type === "topup"
+              ? transaction.Transaction_type === 'topup'
                 ? parseFloat(transaction.customer.Balance) -
                   parseFloat(transaction.total_amount)
                 : parseFloat(transaction.customer.Balance) +
@@ -780,8 +794,8 @@ const transactionController = {
         .code(200);
     } catch (error) {
       await t.rollback();
-      console.error("Error deleting transaction:", error);
-      return Boom.internal("Failed to delete transaction");
+      console.error('Error deleting transaction:', error);
+      return Boom.internal('Failed to delete transaction');
     }
   },
 };

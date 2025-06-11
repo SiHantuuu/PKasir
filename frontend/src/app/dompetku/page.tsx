@@ -1,7 +1,6 @@
 'use client';
 
 import type React from 'react';
-
 import { useEffect, useState } from 'react';
 import {
   ArrowDownLeft,
@@ -29,76 +28,78 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Badge } from '@/components/ui/badge';
 
-// Mock student data for demonstration
-const mockStudents = [
-  {
-    NIS: '12345',
-    NFC_id: 'NFC001',
-    PIN: '1234',
-    Nama: 'John Doe',
-    Balance: 150000,
-  },
-  {
-    NIS: '67890',
-    NFC_id: 'NFC002',
-    PIN: '5678',
-    Nama: 'Jane Smith',
-    Balance: 75000,
-  },
-];
-
-// Mock transaction data
-const mockTransactions = [
-  {
-    id: 1,
-    date: '2023-05-12T08:30:00',
-    type: 'purchase',
-    amount: 15000,
-    note: 'Snack Potato Chips (2), Mineral Water (1)',
-    details: [
-      {
-        product_id: 1,
-        product_name: 'Snack Potato Chips',
-        amount: 2,
-        price: 8000,
-      },
-      { product_id: 3, product_name: 'Mineral Water', amount: 1, price: 5000 },
-    ],
-  },
-  {
-    id: 2,
-    date: '2023-05-11T12:45:00',
-    type: 'topup',
-    amount: 50000,
-    note: 'Top up via Admin',
-    details: [],
-  },
-  {
-    id: 3,
-    date: '2023-05-10T10:15:00',
-    type: 'purchase',
-    amount: 12000,
-    note: 'Chocolate Bar (1)',
-    details: [
-      { product_id: 2, product_name: 'Chocolate Bar', amount: 1, price: 12000 },
-    ],
-  },
-  {
-    id: 4,
-    date: '2023-05-09T14:20:00',
-    type: 'topup',
-    amount: 100000,
-    note: 'Initial balance',
-    details: [],
-  },
-];
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface Student {
+  id: number;
   NIS: string;
-  NFC_id: string;
-  PIN: string;
+  NISN?: string;
+  username: string;
   Nama: string;
+  Gen?: number;
   Balance: number;
+  email?: string;
+  NFC_id?: string;
+  role?: {
+    name: string;
+  };
+}
+
+interface TransactionDetail {
+  product_id: number;
+  product_name: string;
+  amount: number;
+  price: number;
+}
+
+interface Transaction {
+  id: number;
+  Transaction_type: string;
+  total_amount: number;
+  Note: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  details?: {
+    Product_id: number;
+    amount: number;
+    product: {
+      id: number;
+      Nama: string;
+      Harga: number;
+    };
+  }[];
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+interface LoginResponse {
+  user: Student;
+  token: string;
+}
+
+interface TransactionsResponse {
+  student: {
+    id: number;
+    nama: string;
+    nis: string;
+    nisn: string;
+    balance: number;
+  };
+  transactions: Transaction[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
 
 export default function Dompetku() {
@@ -106,61 +107,176 @@ export default function Dompetku() {
   const [identifier, setIdentifier] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<Student | null>(null);
-  const [transactions, setTransactions] = useState(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    Transaction[]
+  >([]);
   const [activeTab, setActiveTab] = useState('all');
   const [expandedTransaction, setExpandedTransaction] = useState<number | null>(
     null
   );
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is already logged in
     const storedUser = sessionStorage.getItem('dompetku_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsLoggedIn(true);
-    }
+    const storedToken = sessionStorage.getItem('dompetku_token');
 
+    if (storedUser && storedToken) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setToken(storedToken);
+      setIsLoggedIn(true);
+      fetchTransactions(userData.id, storedToken);
+    }
+  }, []);
+
+  useEffect(() => {
     // Filter transactions based on active tab
     if (activeTab === 'all') {
-      setTransactions(mockTransactions);
+      setFilteredTransactions(transactions);
     } else {
-      setTransactions(mockTransactions.filter((t) => t.type === activeTab));
+      const filterType =
+        activeTab === 'topup'
+          ? 'topup'
+          : activeTab === 'purchase'
+          ? 'purchase'
+          : activeTab === 'penalty'
+          ? 'penalty'
+          : activeTab;
+      setFilteredTransactions(
+        transactions.filter((t) => t.Transaction_type === filterType)
+      );
     }
-  }, [activeTab]);
+  }, [activeTab, transactions]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  ; // Update fungsi fetchTransactions dengan logging yang lebih detail
+  const fetchTransactions = async (studentId, authToken) => {
+    try {
+      setLoading(true);
+      console.log(`Fetching transactions for student ID: ${studentId}`);
+      console.log(`Using token: ${authToken ? 'Token present' : 'No token'}`);
+
+      const url = `${API_BASE_URL}/transactions/siswa/${studentId}?limit=50`;
+      console.log(`Request URL: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log(`Response status: ${response.status}`);
+      console.log(`Response ok: ${response.ok}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Error response body: ${errorText}`);
+        throw new Error(
+          `Failed to fetch transactions: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log(`API Response:`, result);
+
+      if (result.success) {
+        console.log(
+          `Transactions received: ${result.data.transactions.length}`
+        );
+        console.log(`Student data:`, result.data.student);
+
+        setTransactions(result.data.transactions);
+
+        // Update user balance from transaction response
+        if (user) {
+          console.log(
+            `Updating user balance from ${user.Balance} to ${result.data.student.balance}`
+          );
+          setUser((prev) =>
+            prev ? { ...prev, Balance: result.data.student.balance } : null
+          );
+        }
+      } else {
+        console.error(`API returned success: false`, result);
+        setError('Failed to load transactions: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      console.error('Error message:', error.message);
+      setError('Failed to load transactions: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     // Check if fields are empty
     if (!identifier || !pin) {
       setError('Please fill in all fields');
+      setLoading(false);
       return;
     }
 
-    // Find student based on either NIS or NFC_id
-    const student = mockStudents.find(
-      (s) => (s.NIS === identifier || s.NFC_id === identifier) && s.PIN === pin
-    );
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login/siswa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier: identifier,
+          PIN: pin,
+        }),
+      });
 
-    if (student) {
-      // Store user info and set logged in state
-      sessionStorage.setItem('dompetku_user', JSON.stringify(student));
-      setUser(student);
-      setIsLoggedIn(true);
-      // Reset form fields
-      setIdentifier('');
-      setPin('');
-    } else {
-      setError('Invalid credentials. Please try again.');
+      const result: ApiResponse<LoginResponse> = await response.json();
+
+      if (response.ok && result.success) {
+        // Store user info and token
+        sessionStorage.setItem(
+          'dompetku_user',
+          JSON.stringify(result.data.user)
+        );
+        sessionStorage.setItem('dompetku_token', result.data.token);
+
+        setUser(result.data.user);
+        setToken(result.data.token);
+        setIsLoggedIn(true);
+
+        // Reset form fields
+        setIdentifier('');
+        setPin('');
+
+        // Fetch transactions
+        await fetchTransactions(result.data.user.id, result.data.token);
+      } else {
+        setError(result.message || 'Invalid credentials. Please try again.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
     sessionStorage.removeItem('dompetku_user');
+    sessionStorage.removeItem('dompetku_token');
     setUser(null);
+    setToken(null);
     setIsLoggedIn(false);
+    setTransactions([]);
+    setFilteredTransactions([]);
   };
 
   const toggleTransaction = (id: number) => {
@@ -182,6 +298,12 @@ export default function Dompetku() {
     }).format(date);
   };
 
+  const refreshTransactions = async () => {
+    if (user && token) {
+      await fetchTransactions(user.id, token);
+    }
+  };
+
   // Login Form View
   const renderLoginForm = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-4">
@@ -198,15 +320,18 @@ export default function Dompetku() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="identifier">Student ID (NIS) or NFC ID</Label>
+              <Label htmlFor="identifier">
+                Student ID (NIS/NISN) or Username
+              </Label>
               <div className="relative">
                 <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="identifier"
-                  placeholder="Enter your Student ID or NFC ID"
+                  placeholder="Enter your Student ID, NISN, or Username"
                   className="pl-10"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -217,16 +342,18 @@ export default function Dompetku() {
                 <Input
                   id="pin"
                   type="password"
-                  placeholder="Enter your PIN"
+                  placeholder="Enter your 6-digit PIN"
                   className="pl-10"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
+                  maxLength={6}
+                  disabled={loading}
                 />
               </div>
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </CardContent>
@@ -249,9 +376,19 @@ export default function Dompetku() {
         <header className="border-b bg-white shadow-sm">
           <div className="flex h-16 items-center px-8 justify-between">
             <h1 className="text-2xl font-semibold">Dompetku</h1>
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshTransactions}
+                disabled={loading}
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -268,11 +405,19 @@ export default function Dompetku() {
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold">{user.Nama}</h2>
                     <p className="text-muted-foreground">NIS: {user.NIS}</p>
+                    {user.NISN && (
+                      <p className="text-muted-foreground">NISN: {user.NISN}</p>
+                    )}
+                    {user.Gen && (
+                      <p className="text-muted-foreground">
+                        Generation: {user.Gen}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Balance</p>
                     <p className="text-3xl font-bold">
-                      Rp {user.Balance.toLocaleString()}
+                      Rp {user.Balance.toLocaleString('id-ID')}
                     </p>
                   </div>
                 </div>
@@ -291,31 +436,39 @@ export default function Dompetku() {
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="purchase">Purchases</TabsTrigger>
                     <TabsTrigger value="topup">Top-ups</TabsTrigger>
+                    <TabsTrigger value="penalty">Penalties</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="all" className="mt-0">
                     <TransactionList
-                      transactions={transactions}
+                      transactions={filteredTransactions}
                       expandedTransaction={expandedTransaction}
                       toggleTransaction={toggleTransaction}
+                      loading={loading}
                     />
                   </TabsContent>
                   <TabsContent value="purchase" className="mt-0">
                     <TransactionList
-                      transactions={transactions.filter(
-                        (t) => t.type === 'purchase'
-                      )}
+                      transactions={filteredTransactions}
                       expandedTransaction={expandedTransaction}
                       toggleTransaction={toggleTransaction}
+                      loading={loading}
                     />
                   </TabsContent>
                   <TabsContent value="topup" className="mt-0">
                     <TransactionList
-                      transactions={transactions.filter(
-                        (t) => t.type === 'topup'
-                      )}
+                      transactions={filteredTransactions}
                       expandedTransaction={expandedTransaction}
                       toggleTransaction={toggleTransaction}
+                      loading={loading}
+                    />
+                  </TabsContent>
+                  <TabsContent value="penalty" className="mt-0">
+                    <TransactionList
+                      transactions={filteredTransactions}
+                      expandedTransaction={expandedTransaction}
+                      toggleTransaction={toggleTransaction}
+                      loading={loading}
                     />
                   </TabsContent>
                 </Tabs>
@@ -338,15 +491,17 @@ export default function Dompetku() {
 }
 
 interface TransactionListProps {
-  transactions: typeof mockTransactions;
+  transactions: Transaction[];
   expandedTransaction: number | null;
   toggleTransaction: (id: number) => void;
+  loading: boolean;
 }
 
 function TransactionList({
   transactions,
   expandedTransaction,
   toggleTransaction,
+  loading,
 }: TransactionListProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -358,6 +513,64 @@ function TransactionList({
       minute: '2-digit',
     }).format(date);
   };
+
+  const getTransactionTypeLabel = (type: string) => {
+    switch (type) {
+      case 'purchase':
+        return 'Purchase';
+      case 'topup':
+        return 'Top-up';
+      case 'penalty':
+        return 'Penalty';
+      default:
+        return type;
+    }
+  };
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'purchase':
+      case 'penalty':
+        return <ArrowUpRight className="h-6 w-6 text-red-500" />;
+      case 'topup':
+        return <ArrowDownLeft className="h-6 w-6 text-green-500" />;
+      default:
+        return <ArrowUpRight className="h-6 w-6 text-gray-500" />;
+    }
+  };
+
+  const getAmountColor = (type: string) => {
+    switch (type) {
+      case 'purchase':
+      case 'penalty':
+        return 'text-red-500';
+      case 'topup':
+        return 'text-green-500';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
+  const getAmountPrefix = (type: string) => {
+    switch (type) {
+      case 'purchase':
+      case 'penalty':
+        return '-';
+      case 'topup':
+        return '+';
+      default:
+        return '';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <Clock className="h-12 w-12 mx-auto text-muted-foreground opacity-50 animate-spin" />
+        <p className="mt-4 text-muted-foreground">Loading transactions...</p>
+      </div>
+    );
+  }
 
   if (transactions.length === 0) {
     return (
@@ -377,45 +590,48 @@ function TransactionList({
             onClick={() => toggleTransaction(transaction.id)}
           >
             <div className="h-10 w-10 rounded-full flex items-center justify-center mr-4">
-              {transaction.type === 'purchase' ? (
-                <ArrowUpRight className="h-6 w-6 text-red-500" />
-              ) : (
-                <ArrowDownLeft className="h-6 w-6 text-green-500" />
-              )}
+              {getTransactionIcon(transaction.Transaction_type)}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center">
                 <Badge
                   variant={
-                    transaction.type === 'purchase' ? 'destructive' : 'default'
+                    transaction.Transaction_type === 'purchase' ||
+                    transaction.Transaction_type === 'penalty'
+                      ? 'destructive'
+                      : transaction.Transaction_type === 'topup'
+                      ? 'default'
+                      : 'secondary'
                   }
                   className="mr-2"
                 >
-                  {transaction.type === 'purchase' ? 'Purchase' : 'Top-up'}
+                  {getTransactionTypeLabel(transaction.Transaction_type)}
                 </Badge>
                 <p className="text-sm text-muted-foreground">
                   <Clock className="h-3 w-3 inline mr-1" />
-                  {formatDate(transaction.date)}
+                  {formatDate(transaction.createdAt)}
                 </p>
               </div>
-              <p className="truncate mt-1">{transaction.note}</p>
+              <p className="truncate mt-1">{transaction.Note}</p>
+              <p className="text-xs text-muted-foreground">
+                Status: {transaction.status}
+              </p>
             </div>
             <div className="text-right">
               <p
-                className={`font-bold ${
-                  transaction.type === 'purchase'
-                    ? 'text-red-500'
-                    : 'text-green-500'
-                }`}
+                className={`font-bold ${getAmountColor(
+                  transaction.Transaction_type
+                )}`}
               >
-                {transaction.type === 'purchase' ? '-' : '+'} Rp{' '}
-                {transaction.amount.toLocaleString()}
+                {getAmountPrefix(transaction.Transaction_type)} Rp{' '}
+                {transaction.total_amount.toLocaleString('id-ID')}
               </p>
             </div>
           </div>
 
           {/* Transaction details */}
           {expandedTransaction === transaction.id &&
+            transaction.details &&
             transaction.details.length > 0 && (
               <div className="bg-muted/30 p-4 border-t">
                 <p className="font-medium mb-2">Transaction Details</p>
@@ -425,20 +641,27 @@ function TransactionList({
                       <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center mr-3">
                         <Image
                           src="/placeholder.svg?height=40&width=40"
-                          alt={detail.product_name}
+                          alt={detail.product?.Nama || 'Product'}
                           width={40}
                           height={40}
                           className="rounded-md"
                         />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{detail.product_name}</p>
+                        <p className="font-medium">
+                          {detail.product?.Nama || 'Unknown Product'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {detail.amount} x Rp {detail.price.toLocaleString()}
+                          {detail.amount} x Rp{' '}
+                          {detail.product?.Harga?.toLocaleString('id-ID') ||
+                            '0'}
                         </p>
                       </div>
                       <p className="font-medium">
-                        Rp {(detail.amount * detail.price).toLocaleString()}
+                        Rp{' '}
+                        {(
+                          (detail.product?.Harga || 0) * detail.amount
+                        ).toLocaleString('id-ID')}
                       </p>
                     </div>
                   ))}

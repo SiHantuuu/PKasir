@@ -1,0 +1,422 @@
+{
+  "info": {
+    "name": "Transaction API Collection",
+    "description": "Complete API collection for transaction management system including topup, purchase, penalty, and transaction history endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Create Topup Transaction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_id\": 1,\n  \"amount\": 50000,\n  \"note\": \"Top-up saldo untuk pembelian\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/transactions/topup",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "topup"]
+        },
+        "description": "Create a new top-up transaction to add balance to student account"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Purchase Transaction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"amount\": 2\n    },\n    {\n      \"product_id\": 2,\n      \"amount\": 1\n    }\n  ],\n  \"note\": \"Pembelian makanan dan minuman\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/transactions/purchase",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "purchase"]
+        },
+        "description": "Create a new purchase transaction with multiple items"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Penalty Transaction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_id\": 1,\n  \"amount\": 10000,\n  \"note\": \"Denda keterlambatan pengembalian buku\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/transactions/penalty",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "penalty"]
+        },
+        "description": "Create a penalty transaction to deduct balance from student account"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions?page=1&limit=10&sortBy=createdAt&sortOrder=DESC&type=all&status=all",
+          "host": ["{{base_url}}"],
+          "path": ["transactions"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Items per page (default: 10, max: 100)"
+            },
+            {
+              "key": "sortBy",
+              "value": "createdAt",
+              "description": "Sort field (default: createdAt)"
+            },
+            {
+              "key": "sortOrder",
+              "value": "DESC",
+              "description": "Sort order: ASC or DESC (default: DESC)"
+            },
+            {
+              "key": "type",
+              "value": "all",
+              "description": "Transaction type: all, topup, purchase, penalty (default: all)"
+            },
+            {
+              "key": "status",
+              "value": "all",
+              "description": "Transaction status: all, completed, pending (default: all)"
+            },
+            {
+              "key": "startDate",
+              "value": "",
+              "description": "Start date filter (YYYY-MM-DD)",
+              "disabled": true
+            },
+            {
+              "key": "endDate",
+              "value": "",
+              "description": "End date filter (YYYY-MM-DD)",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Get all transactions with pagination and filtering options"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Transactions - Purchase Only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions?type=purchase&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["transactions"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Get only purchase transactions"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Transactions - Date Range",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions?startDate=2024-01-01&endDate=2024-12-31",
+          "host": ["{{base_url}}"],
+          "path": ["transactions"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2024-01-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2024-12-31"
+            }
+          ]
+        },
+        "description": "Get transactions within specific date range"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transaction by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/1",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "1"]
+        },
+        "description": "Get specific transaction by ID with full details"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transactions by Student ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/siswa/1?page=1&limit=10&type=all",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "siswa", "1"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "type",
+              "value": "all",
+              "description": "Filter by type: all, topup, purchase, penalty"
+            }
+          ]
+        },
+        "description": "Get all transactions for a specific student"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Student Purchase History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/siswa/1?type=purchase&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "siswa", "1"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Get only purchase transactions for a specific student"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transaction History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/history?startDate=2024-01-01&endDate=2024-12-31&type=all&page=1&limit=50",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "history"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2024-01-01",
+              "description": "Required: Start date (YYYY-MM-DD)"
+            },
+            {
+              "key": "endDate",
+              "value": "2024-12-31",
+              "description": "Required: End date (YYYY-MM-DD)"
+            },
+            {
+              "key": "siswaId",
+              "value": "",
+              "description": "Optional: Filter by specific student ID",
+              "disabled": true
+            },
+            {
+              "key": "type",
+              "value": "all",
+              "description": "Transaction type filter"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
+          ]
+        },
+        "description": "Get transaction history with statistics within date range"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transaction History - Specific Student",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/history?startDate=2024-01-01&endDate=2024-12-31&siswaId=1&type=purchase",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "history"],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2024-01-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2024-12-31"
+            },
+            {
+              "key": "siswaId",
+              "value": "1"
+            },
+            {
+              "key": "type",
+              "value": "purchase"
+            }
+          ]
+        },
+        "description": "Get transaction history for specific student and type"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Transaction Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/transactions/1/details",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "1", "details"]
+        },
+        "description": "Get detailed transaction information including products and customer info"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Transaction",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Transaction was created by mistake\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/transactions/1",
+          "host": ["{{base_url}}"],
+          "path": ["transactions", "1"]
+        },
+        "description": "Delete transaction and reverse its effects (restore balance and stock)"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:3000/api');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has correct content type', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});",
+          "",
+          "if (pm.response.code === 200 || pm.response.code === 201) {",
+          "    pm.test('Response has success field', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('success');",
+          "        pm.expect(jsonData.success).to.be.true;",
+          "    });",
+          "    ",
+          "    pm.test('Response has message field', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('message');",
+          "    });",
+          "    ",
+          "    pm.test('Response has data field', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('data');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string",
+      "description": "Base URL for the API"
+    }
+  ]
+}

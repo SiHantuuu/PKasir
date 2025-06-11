@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "Siswa API Collection",
+    "description": "Collection untuk mengelola data siswa - endpoints untuk CRUD operations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get All Siswa",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/siswa?page=1&limit=10&sortBy=createdAt&sortOrder=DESC&status=all",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Items per page (default: 10)"
+            },
+            {
+              "key": "sortBy",
+              "value": "createdAt",
+              "description": "Field to sort by (default: createdAt)"
+            },
+            {
+              "key": "sortOrder",
+              "value": "DESC",
+              "description": "Sort order: ASC or DESC (default: DESC)"
+            },
+            {
+              "key": "status",
+              "value": "all",
+              "description": "Filter by status: all, active, inactive (default: all)"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Siswa by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/siswa/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Search Siswa",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/siswa/search?query=john&page=1&limit=10&sortBy=createdAt&sortOrder=DESC",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa", "search"],
+          "query": [
+            {
+              "key": "query",
+              "value": "john",
+              "description": "Search query - searches in Nama, NIS, NISN, username"
+            },
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Items per page (default: 10)"
+            },
+            {
+              "key": "sortBy",
+              "value": "createdAt",
+              "description": "Field to sort by (default: createdAt)"
+            },
+            {
+              "key": "sortOrder",
+              "value": "DESC",
+              "description": "Sort order: ASC or DESC (default: DESC)"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Siswa",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"Nama\": \"John Doe Updated\",\n  \"NIS\": \"123456789\",\n  \"NISN\": \"987654321\",\n  \"username\": \"johndoe_updated\",\n  \"email\": \"john.updated@example.com\",\n  \"Gen\": 2024,\n  \"NFC_id\": \"NFC123456\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/siswa/1",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Deactivate Siswa",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Siswa sudah lulus atau pindah sekolah\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/siswa/1/deactivate",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa", "1", "deactivate"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Activate Siswa",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/siswa/1/activate",
+          "host": ["{{baseUrl}}"],
+          "path": ["siswa", "1", "activate"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
