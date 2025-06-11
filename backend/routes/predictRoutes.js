@@ -1,43 +1,43 @@
-const Joi = require('joi');
-const predictController = require('../controllers/predictController');
+const Joi = require("joi");
+const predictController = require("../controllers/predictController");
 
 const predictRoutes = [
   {
-    method: 'POST',
-    path: '/predict/image',
+    method: "POST",
+    path: "/predict/image",
     handler: predictController.predictImage,
     options: {
-      description: 'Predict objects in uploaded image',
-      tags: ['api', 'prediction'],
+      description: "Predict objects in uploaded image",
+      tags: ["api", "prediction"],
       payload: {
-        output: 'stream',
+        output: "stream",
         parse: true,
         multipart: true,
         maxBytes: 16 * 1024 * 1024, // 16MB
-        allow: 'multipart/form-data',
+        allow: "multipart/form-data",
       },
       validate: {
         payload: Joi.object({
           image: Joi.any()
-            .meta({ swaggerType: 'file' })
+            .meta({ swaggerType: "file" })
             .required()
-            .description('Image file to analyze'),
+            .description("Image file to analyze"),
           confidence_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.5)
             .optional()
-            .description('Confidence threshold for predictions (0-1)'),
+            .description("Confidence threshold for predictions (0-1)"),
           detection_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.6)
             .optional()
-            .description('Detection threshold for filtering results (0-1)'),
+            .description("Detection threshold for filtering results (0-1)"),
           save_result: Joi.boolean()
             .default(false)
             .optional()
-            .description('Save result image on server'),
+            .description("Save result image on server"),
         }),
       },
       response: {
@@ -65,33 +65,33 @@ const predictRoutes = [
     },
   },
   {
-    method: 'POST',
-    path: '/predict/base64',
+    method: "POST",
+    path: "/predict/base64",
     handler: predictController.predictBase64,
     options: {
-      description: 'Predict objects in base64 encoded image',
-      tags: ['api', 'prediction'],
+      description: "Predict objects in base64 encoded image",
+      tags: ["api", "prediction"],
       validate: {
         payload: Joi.object({
           image: Joi.string()
             .required()
-            .description('Base64 encoded image data'),
+            .description("Base64 encoded image data"),
           confidence_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.5)
             .optional()
-            .description('Confidence threshold for predictions (0-1)'),
+            .description("Confidence threshold for predictions (0-1)"),
           detection_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.6)
             .optional()
-            .description('Detection threshold for filtering results (0-1)'),
+            .description("Detection threshold for filtering results (0-1)"),
           return_image: Joi.boolean()
             .default(false)
             .optional()
-            .description('Return processed image as base64'),
+            .description("Return processed image as base64"),
         }),
       },
       response: {
@@ -119,12 +119,12 @@ const predictRoutes = [
     },
   },
   {
-    method: 'POST',
-    path: '/predict/batch',
+    method: "POST",
+    path: "/predict/batch",
     handler: predictController.predictBatch,
     options: {
-      description: 'Batch prediction for multiple base64 images',
-      tags: ['api', 'prediction', 'batch'],
+      description: "Batch prediction for multiple base64 images",
+      tags: ["api", "prediction", "batch"],
       validate: {
         payload: Joi.object({
           images: Joi.array()
@@ -139,23 +139,23 @@ const predictRoutes = [
             .min(1)
             .max(10) // Limit batch size
             .required()
-            .description('Array of base64 images to process'),
+            .description("Array of base64 images to process"),
           confidence_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.5)
             .optional()
-            .description('Default confidence threshold for all images'),
+            .description("Default confidence threshold for all images"),
           detection_threshold: Joi.number()
             .min(0)
             .max(1)
             .default(0.6)
             .optional()
-            .description('Default detection threshold for all images'),
+            .description("Default detection threshold for all images"),
           return_image: Joi.boolean()
             .default(false)
             .optional()
-            .description('Default return image setting for all images'),
+            .description("Default return image setting for all images"),
         }),
       },
       response: {
@@ -190,26 +190,26 @@ const predictRoutes = [
     },
   },
   {
-    method: 'GET',
-    path: '/predict/result/{id}',
+    method: "GET",
+    path: "/predict/result/{id}",
     handler: predictController.getResultImage,
     options: {
-      description: 'Get processed result image by ID',
-      tags: ['api', 'prediction', 'result'],
+      description: "Get processed result image by ID",
+      tags: ["api", "prediction", "result"],
       validate: {
         params: Joi.object({
-          id: Joi.string().required().description('Result image ID'),
+          id: Joi.string().required().description("Result image ID"),
         }),
       },
     },
   },
   {
-    method: 'GET',
-    path: '/predict/health',
+    method: "GET",
+    path: "/predict/health",
     handler: predictController.checkHealth,
     options: {
-      description: 'Check Flask API health status',
-      tags: ['api', 'health'],
+      description: "Check Flask API health status",
+      tags: ["api", "health"],
       response: {
         schema: Joi.object({
           success: Joi.boolean().required(),
@@ -224,12 +224,12 @@ const predictRoutes = [
     },
   },
   {
-    method: 'GET',
-    path: '/predict/model/info',
+    method: "GET",
+    path: "/predict/model/info",
     handler: predictController.getModelInfo,
     options: {
-      description: 'Get model information',
-      tags: ['api', 'model'],
+      description: "Get model information",
+      tags: ["api", "model"],
       response: {
         schema: Joi.object({
           success: Joi.boolean().required(),

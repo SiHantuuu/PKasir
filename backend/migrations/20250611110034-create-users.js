@@ -1,8 +1,7 @@
-'use strict';
-
+"use strict";
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Users', {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable("Users", {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -12,17 +11,17 @@ module.exports = {
       NIS: {
         type: Sequelize.STRING,
         unique: true,
-        allowNull: true, // Untuk admin mungkin tidak punya NIS
+        allowNull: true,
       },
       NISN: {
         type: Sequelize.STRING,
         unique: true,
-        allowNull: true, // Untuk admin mungkin tidak punya NISN
+        allowNull: true,
       },
       username: {
         type: Sequelize.STRING,
         unique: true,
-        allowNull: false, // Username wajib untuk semua user
+        allowNull: false,
       },
       email: {
         type: Sequelize.STRING,
@@ -35,7 +34,7 @@ module.exports = {
       },
       Gen: {
         type: Sequelize.INTEGER,
-        allowNull: true, // Admin mungkin tidak punya generasi
+        allowNull: true,
       },
       NFC_id: {
         type: Sequelize.STRING,
@@ -48,7 +47,7 @@ module.exports = {
       },
       password: {
         type: Sequelize.STRING,
-        allowNull: true, // Untuk login admin
+        allowNull: true,
       },
       Balance: {
         type: Sequelize.DECIMAL(10, 2),
@@ -58,11 +57,9 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Roles',
-          key: 'id',
+          model: "Roles",
+          key: "id",
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT', // Jangan hapus role jika masih ada user yang menggunakannya
       },
       is_active: {
         type: Sequelize.BOOLEAN,
@@ -78,17 +75,9 @@ module.exports = {
       },
     });
 
-    // Tambahkan index untuk performa
-    await queryInterface.addIndex('Users', ['role_id'], {
-      name: 'users_role_id_index',
-    });
-
-    await queryInterface.addIndex('Users', ['username'], {
-      name: 'users_username_index',
-    });
+    await queryInterface.addIndex("Users", ["role_id"]);
   },
-
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Users');
+  async down(queryInterface) {
+    await queryInterface.dropTable("Users");
   },
 };
