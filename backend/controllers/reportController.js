@@ -6,9 +6,10 @@ const {
   Produk,
   Category,
   Role,
+  sequelize, // Import instance sequelize dari models
 } = require('../models');
-const { Op, fn, col, literal } = require('sequelize');
-const sequelize = require('../config/config.json');
+
+const { Op, fn, col, literal, Sequelize } = require('sequelize'); // Tambahkan Sequelize
 const Boom = require('@hapi/boom');
 
 const reportController = {
@@ -79,7 +80,7 @@ const reportController = {
         raw: true,
       });
 
-      // Transaksi harian (untuk grafik)
+      // Transaksi harian (untuk grafik) - MySQL compatible
       const dailyTransactions = await Transaksi.findAll({
         where: { ...dateFilter, status: 'completed' },
         attributes: [
@@ -186,62 +187,54 @@ const reportController = {
         offset: offset,
       });
 
-      // Statistik saldo
-      const balanceStats = await User.findOne({
-        include: [
-          {
-            model: Role,
-            as: 'role',
-            where: { name: 'student' },
-          },
-        ],
-        attributes: [
-          [fn('SUM', col('Balance')), 'total_balance'],
-          [fn('AVG', col('Balance')), 'average_balance'],
-          [fn('MIN', col('Balance')), 'min_balance'],
-          [fn('MAX', col('Balance')), 'max_balance'],
-          [fn('COUNT', col('User.id')), 'total_students'],
-        ],
-        raw: true,
+      // MySQL compatible - Statistik saldo menggunakan raw query
+      const balanceStatsQuery = `
+        SELECT 
+          SUM(u.Balance) as total_balance,
+          AVG(u.Balance) as average_balance,
+          MIN(u.Balance) as min_balance,
+          MAX(u.Balance) as max_balance,
+          COUNT(u.id) as total_students
+        FROM Users u
+        INNER JOIN Roles r ON u.role_id = r.id
+        WHERE r.name = 'student'
+      `;
+
+      const [balanceStatsResult] = await sequelize.query(balanceStatsQuery, {
+        type: Sequelize.QueryTypes.SELECT,
       });
 
-      // Distribusi saldo
-      const balanceDistribution = await User.findAll({
-        include: [
-          {
-            model: Role,
-            as: 'role',
-            where: { name: 'student' },
-          },
-        ],
-        attributes: [
-          [
-            literal(`
-                CASE 
-                  WHEN "Balance" = 0 THEN 'Zero Balance'
-                  WHEN "Balance" > 0 AND "Balance" <= 10000 THEN '1-10K'
-                  WHEN "Balance" > 10000 AND "Balance" <= 50000 THEN '10K-50K'
-                  WHEN "Balance" > 50000 AND "Balance" <= 100000 THEN '50K-100K'
-                  WHEN "Balance" > 100000 THEN 'Above 100K'
-                END
-              `),
-            'balance_range',
-          ],
-          [fn('COUNT', col('User.id')), 'student_count'],
-        ],
-        group: [
-          literal(`
-            CASE 
-              WHEN "Balance" = 0 THEN 'Zero Balance'
-              WHEN "Balance" > 0 AND "Balance" <= 10000 THEN '1-10K'
-              WHEN "Balance" > 10000 AND "Balance" <= 50000 THEN '10K-50K'
-              WHEN "Balance" > 50000 AND "Balance" <= 100000 THEN '50K-100K'
-              WHEN "Balance" > 100000 THEN 'Above 100K'
-            END
-          `),
-        ],
-        raw: true,
-      });
+      // FIXED: MySQL compatible - Distribusi saldo dengan CASE WHEN dan GROUP BY alias
+      const balanceDistributionQuery = `
+        SELECT 
+          CASE 
+            WHEN u.Balance = 0 THEN 'Zero Balance'
+            WHEN u.Balance > 0 AND u.Balance <= 10000 THEN '1-10K'
+            WHEN u.Balance > 10000 AND u.Balance <= 50000 THEN '10K-50K'
+            WHEN u.Balance > 50000 AND u.Balance <= 100000 THEN '50K-100K'
+            WHEN u.Balance > 100000 THEN 'Above 100K'
+          END as balance_range,
+          COUNT(u.id) as student_count
+        FROM Users u
+        INNER JOIN Roles r ON u.role_id = r.id
+        WHERE r.name = 'student'
+        GROUP BY balance_range
+        ORDER BY 
+          CASE balance_range
+            WHEN 'Zero Balance' THEN 1
+            WHEN '1-10K' THEN 2
+            WHEN '10K-50K' THEN 3
+            WHEN '50K-100K' THEN 4
+            WHEN 'Above 100K' THEN 5
+          END
+      `;
+
+      const balanceDistribution = await sequelize.query(
+        balanceDistributionQuery,
+        {
+          type: Sequelize.QueryTypes.SELECT,
+        }
+      );
 
       const totalPages = Math.ceil(count / parseInt(limit));
 
@@ -252,11 +245,13 @@ const reportController = {
           data: {
             students: siswaBalances,
             statistics: {
-              total_students: parseInt(balanceStats.total_students || 0),
-              total_balance: parseFloat(balanceStats.total_balance || 0),
-              average_balance: parseFloat(balanceStats.average_balance || 0),
-              min_balance: parseFloat(balanceStats.min_balance || 0),
-              max_balance: parseFloat(balanceStats.max_balance || 0),
+              total_students: parseInt(balanceStatsResult.total_students || 0),
+              total_balance: parseFloat(balanceStatsResult.total_balance || 0),
+              average_balance: parseFloat(
+                balanceStatsResult.average_balance || 0
+              ),
+              min_balance: parseFloat(balanceStatsResult.min_balance || 0),
+              max_balance: parseFloat(balanceStatsResult.max_balance || 0),
             },
             balance_distribution: balanceDistribution.map((item) => ({
               range: item.balance_range,
@@ -411,64 +406,55 @@ const reportController = {
         };
       }
 
-      const bestSellingProducts = await Transaction_detail.findAll({
-        include: [
-          {
-            model: Produk,
-            as: 'product',
-            attributes: ['id', 'Nama', 'Harga', 'Stok'],
-            include: [
-              {
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'Nama'],
-              },
-            ],
-          },
-          {
-            model: Transaksi,
-            as: 'transaction',
-            where: {
-              ...transactionFilter,
-              Transaction_type: 'purchase',
-              status: 'completed',
-            },
-            attributes: [],
-          },
-        ],
-        attributes: [
-          'Product_id',
-          [fn('SUM', col('amount')), 'total_sold'],
-          [fn('COUNT', col('Transaction_detail.id')), 'transaction_count'],
-          [
-            fn(
-              'SUM',
-              literal(
-                'amount * (SELECT "Harga" FROM "Produks" WHERE "id" = "Transaction_detail"."Product_id")'
-              )
-            ),
-            'total_revenue',
-          ],
-        ],
-        group: ['Product_id', 'product.id', 'product.category.id'],
-        order: [[fn('SUM', col('amount')), 'DESC']],
-        limit: parseInt(limit),
-        raw: false,
+      // MySQL compatible query menggunakan raw query
+      let dateCondition = '';
+      let dateParams = [];
+
+      if (startDate && endDate) {
+        dateCondition = 'AND t.createdAt BETWEEN ? AND ?';
+        dateParams = [new Date(startDate), new Date(endDate)];
+      }
+
+      const bestSellingQuery = `
+        SELECT 
+          td.Product_id,
+          p.Nama as product_name,
+          c.Nama as category_name,
+          p.Harga as current_price,
+          p.Stok as current_stock,
+          SUM(td.amount) as total_sold,
+          COUNT(td.id) as transaction_count,
+          SUM(td.amount * p.Harga) as total_revenue
+        FROM Transaction_details td
+        INNER JOIN transaksis t ON td.Transaction_id = t.id
+        INNER JOIN Produks p ON td.Product_id = p.id
+        LEFT JOIN Categories c ON p.Category_id = c.id
+        WHERE t.Transaction_type = 'purchase' 
+          AND t.status = 'completed'
+          ${dateCondition}
+        GROUP BY td.Product_id, p.id, c.id
+        ORDER BY SUM(td.amount) DESC
+        LIMIT ?
+      `;
+
+      const params = [...dateParams, parseInt(limit)];
+      const bestSellingProducts = await sequelize.query(bestSellingQuery, {
+        replacements: params,
+        type: sequelize.QueryTypes.SELECT,
       });
 
       // Format hasil
       const formattedResults = bestSellingProducts.map((item) => ({
         product_id: item.Product_id,
-        product_name: item.product?.Nama || 'Produk tidak ditemukan',
-        category: item.product?.category?.Nama || null,
-        current_price: parseFloat(item.product?.Harga || 0),
-        current_stock: item.product?.Stok || 0,
-        total_sold: parseInt(item.dataValues.total_sold),
-        transaction_count: parseInt(item.dataValues.transaction_count),
-        total_revenue: parseFloat(item.dataValues.total_revenue || 0),
+        product_name: item.product_name || 'Produk tidak ditemukan',
+        category: item.category_name || null,
+        current_price: parseFloat(item.current_price || 0),
+        current_stock: item.current_stock || 0,
+        total_sold: parseInt(item.total_sold),
+        transaction_count: parseInt(item.transaction_count),
+        total_revenue: parseFloat(item.total_revenue || 0),
         average_per_transaction:
-          parseInt(item.dataValues.total_sold) /
-          parseInt(item.dataValues.transaction_count),
+          parseInt(item.total_sold) / parseInt(item.transaction_count),
       }));
 
       return h
@@ -506,110 +492,79 @@ const reportController = {
     try {
       const { startDate, endDate } = request.query;
 
-      let transactionFilter = {};
+      let dateCondition = '';
+      let dateParams = [];
+
       if (startDate && endDate) {
-        transactionFilter.createdAt = {
-          [Op.between]: [new Date(startDate), new Date(endDate)],
-        };
+        dateCondition = 'AND t.createdAt BETWEEN ? AND ?';
+        dateParams = [new Date(startDate), new Date(endDate)];
       }
 
-      const popularCategories = await Transaction_detail.findAll({
-        include: [
-          {
-            model: Produk,
-            as: 'product',
-            attributes: ['Category_id'],
-            include: [
-              {
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'Nama'],
-              },
-            ],
-          },
-          {
-            model: Transaksi,
-            as: 'transaction',
-            where: {
-              ...transactionFilter,
-              Transaction_type: 'purchase',
-              status: 'completed',
-            },
-            attributes: [],
-          },
-        ],
-        attributes: [
-          [fn('SUM', col('amount')), 'total_items_sold'],
-          [fn('COUNT', col('Transaction_detail.id')), 'total_transactions'],
-          [
-            fn('COUNT', fn('DISTINCT', col('Transaction_detail.Product_id'))),
-            'unique_products',
-          ],
-          [
-            fn(
-              'SUM',
-              literal(
-                'amount * (SELECT "Harga" FROM "Produks" WHERE "id" = "Transaction_detail"."Product_id")'
-              )
-            ),
-            'total_revenue',
-          ],
-        ],
-        group: ['product.category.id', 'product.Category_id'],
-        having: literal('"product"."category"."id" IS NOT NULL'),
-        order: [[fn('SUM', col('amount')), 'DESC']],
-        raw: false,
+      const popularCategoriesQuery = `
+        SELECT 
+          c.id as category_id,
+          c.Nama as category_name,
+          SUM(td.amount) as total_items_sold,
+          COUNT(td.id) as total_transactions,
+          COUNT(DISTINCT td.Product_id) as unique_products,
+          SUM(td.amount * p.Harga) as total_revenue
+        FROM Transaction_details td
+        INNER JOIN transaksis t ON td.Transaction_id = t.id
+        INNER JOIN Produks p ON td.Product_id = p.id
+        INNER JOIN Categories c ON p.Category_id = c.id
+        WHERE t.Transaction_type = 'purchase' 
+          AND t.status = 'completed'
+          ${dateCondition}
+        GROUP BY c.id, c.Nama
+        ORDER BY SUM(td.amount) DESC
+      `;
+
+      const popularCategories = await sequelize.query(popularCategoriesQuery, {
+        replacements: dateParams,
+        type: sequelize.QueryTypes.SELECT,
       });
 
       // Format hasil
-      const formattedResults = popularCategories
-        .map((item) => ({
-          category_id: item.product?.category?.id,
-          category_name:
-            item.product?.category?.Nama || 'Kategori tidak ditemukan',
-          total_items_sold: parseInt(item.dataValues.total_items_sold),
-          total_transactions: parseInt(item.dataValues.total_transactions),
-          unique_products: parseInt(item.dataValues.unique_products),
-          total_revenue: parseFloat(item.dataValues.total_revenue || 0),
-          average_per_transaction:
-            parseInt(item.dataValues.total_items_sold) /
-            parseInt(item.dataValues.total_transactions),
-        }))
-        .filter((item) => item.category_id); // Filter out null categories
+      const formattedResults = popularCategories.map((item) => ({
+        category_id: item.category_id,
+        category_name: item.category_name || 'Kategori tidak ditemukan',
+        total_items_sold: parseInt(item.total_items_sold),
+        total_transactions: parseInt(item.total_transactions),
+        unique_products: parseInt(item.unique_products),
+        total_revenue: parseFloat(item.total_revenue || 0),
+        average_per_transaction:
+          parseInt(item.total_items_sold) / parseInt(item.total_transactions),
+      }));
 
-      // Top products per kategori
+      // Top products per kategori untuk top 5 categories
       for (let category of formattedResults.slice(0, 5)) {
-        // Top 5 categories
-        const topProducts = await Transaction_detail.findAll({
-          include: [
-            {
-              model: Produk,
-              as: 'product',
-              where: { Category_id: category.category_id },
-              attributes: ['id', 'Nama', 'Harga'],
-            },
-            {
-              model: Transaksi,
-              as: 'transaction',
-              where: {
-                ...transactionFilter,
-                Transaction_type: 'purchase',
-                status: 'completed',
-              },
-              attributes: [],
-            },
-          ],
-          attributes: ['Product_id', [fn('SUM', col('amount')), 'total_sold']],
-          group: ['Product_id', 'product.id'],
-          order: [[fn('SUM', col('amount')), 'DESC']],
-          limit: 3,
-          raw: false,
+        const topProductsQuery = `
+          SELECT 
+            td.Product_id,
+            p.Nama as product_name,
+            SUM(td.amount) as total_sold
+          FROM Transaction_details td
+          INNER JOIN transaksis t ON td.Transaction_id = t.id
+          INNER JOIN Produks p ON td.Product_id = p.id
+          WHERE p.Category_id = ?
+            AND t.Transaction_type = 'purchase' 
+            AND t.status = 'completed'
+            ${dateCondition}
+          GROUP BY td.Product_id, p.id
+          ORDER BY SUM(td.amount) DESC
+          LIMIT 3
+        `;
+
+        const topProductsParams = [category.category_id, ...dateParams];
+        const topProducts = await sequelize.query(topProductsQuery, {
+          replacements: topProductsParams,
+          type: sequelize.QueryTypes.SELECT,
         });
 
         category.top_products = topProducts.map((prod) => ({
           product_id: prod.Product_id,
-          product_name: prod.product?.Nama,
-          total_sold: parseInt(prod.dataValues.total_sold),
+          product_name: prod.product_name,
+          total_sold: parseInt(prod.total_sold),
         }));
       }
 
@@ -718,50 +673,54 @@ const reportController = {
         limit: 10,
       });
 
-      // Produk yang sering dibeli
-      const favoriteProducts = await Transaction_detail.findAll({
-        include: [
-          {
-            model: Transaksi,
-            as: 'transaction',
-            where: {
-              ...dateFilter,
-              Transaction_type: 'purchase',
-              status: 'completed',
-            },
-            attributes: [],
-          },
-          {
-            model: Produk,
-            as: 'product',
-            attributes: ['id', 'Nama', 'Harga'],
-          },
-        ],
-        attributes: [
-          'Product_id',
-          [fn('SUM', col('amount')), 'total_bought'],
-          [fn('COUNT', col('Transaction_detail.id')), 'transaction_count'],
-        ],
-        group: ['Product_id', 'product.id'],
-        order: [[fn('SUM', col('amount')), 'DESC']],
-        limit: 5,
-        raw: false,
+      // Produk yang sering dibeli - MySQL compatible
+      let dateCondition = '';
+      let dateParams = [parseInt(siswaId)];
+
+      if (startDate && endDate) {
+        dateCondition = 'AND t.createdAt BETWEEN ? AND ?';
+        dateParams.push(new Date(startDate), new Date(endDate));
+      }
+
+      const favoriteProductsQuery = `
+        SELECT 
+          td.Product_id,
+          p.Nama as product_name,
+          SUM(td.amount) as total_bought,
+          COUNT(td.id) as transaction_count
+        FROM Transaction_details td
+        INNER JOIN transaksis t ON td.Transaction_id = t.id
+        INNER JOIN Produks p ON td.Product_id = p.id
+        WHERE t.Customer_id = ?
+          AND t.Transaction_type = 'purchase' 
+          AND t.status = 'completed'
+          ${dateCondition}
+        GROUP BY td.Product_id, p.id
+        ORDER BY SUM(td.amount) DESC
+        LIMIT 5
+      `;
+
+      const favoriteProducts = await sequelize.query(favoriteProductsQuery, {
+        replacements: dateParams,
+        type: sequelize.QueryTypes.SELECT,
       });
 
-      // Spending pattern (pengeluaran per bulan)
-      const monthlySpending = await Transaksi.findAll({
-        where: {
-          Customer_id: parseInt(siswaId),
-          Transaction_type: ['purchase', 'penalty'],
-          status: 'completed',
-        },
-        attributes: [
-          [fn('DATE_TRUNC', 'month', col('createdAt')), 'month'],
-          [fn('SUM', col('total_amount')), 'total_spent'],
-        ],
-        group: [fn('DATE_TRUNC', 'month', col('createdAt'))],
-        order: [[fn('DATE_TRUNC', 'month', col('createdAt')), 'ASC']],
-        raw: true,
+      // Spending pattern (pengeluaran per bulan) - MySQL compatible
+      const monthlySpendingQuery = `
+      SELECT 
+        DATE_FORMAT(createdAt, '%Y-%m-01') as month,
+        SUM(total_amount) as total_spent
+      FROM transaksis
+      WHERE Customer_id = ?
+        AND Transaction_type IN ('purchase', 'penalty')
+        AND status = 'completed'
+      GROUP BY DATE_FORMAT(createdAt, '%Y-%m-01')
+      ORDER BY month ASC
+    `;
+
+      const monthlySpending = await sequelize.query(monthlySpendingQuery, {
+        replacements: [parseInt(siswaId)],
+        type: sequelize.QueryTypes.SELECT,
       });
 
       // Format summary
@@ -796,9 +755,9 @@ const reportController = {
             recent_transactions: recentTransactions,
             favorite_products: favoriteProducts.map((item) => ({
               product_id: item.Product_id,
-              product_name: item.product?.Nama,
-              total_bought: parseInt(item.dataValues.total_bought),
-              transaction_count: parseInt(item.dataValues.transaction_count),
+              product_name: item.product_name,
+              total_bought: parseInt(item.total_bought),
+              transaction_count: parseInt(item.transaction_count),
             })),
             monthly_spending: monthlySpending.map((item) => ({
               month: item.month,
@@ -862,13 +821,17 @@ const reportController = {
           const mockH = {
             response: (data) => ({ code: () => data }),
           };
-          const result = await this.getTransactionSummary(mockRequest, mockH);
+          // Solution 1: Direct method call (if in same module.exports)
+          const result = await exports.getTransactionSummary(
+            mockRequest,
+            mockH
+          );
           reportData = result;
           break;
 
         case 'student_balances':
-          const reqBalance = { query: { ...request.query, limit: 1000 } }; // Export semua data
-          const resultBalance = await this.getSaldoAllSiswa(reqBalance, {
+          const reqBalance = { query: { ...request.query, limit: 1000 } };
+          const resultBalance = await exports.getSaldoAllSiswa(reqBalance, {
             response: (data) => ({ code: () => data }),
           });
           reportData = resultBalance;
@@ -876,7 +839,7 @@ const reportController = {
 
         case 'best_selling_products':
           const reqProducts = { query: { ...request.query, limit: 100 } };
-          const resultProducts = await this.getBestSellingProducts(
+          const resultProducts = await exports.getBestSellingProducts(
             reqProducts,
             {
               response: (data) => ({ code: () => data }),
@@ -944,9 +907,9 @@ const reportController = {
                 data.data.students.forEach((student) => {
                   csvContent += `${student.id},${student.NIS || ''},${
                     student.NISN || ''
-                  },${student.Nama},${student.username},${student.Balance},${
-                    student.is_active
-                  }\n`;
+                  },"${student.Nama}","${student.username}",${
+                    student.Balance
+                  },${student.is_active}\n`;
                 });
 
                 // Add statistics
@@ -1014,7 +977,7 @@ const reportController = {
     }
   },
 
-  // 8. Dashboard analytics - Kombinasi berbagai metrics untuk dashboard
+  // 8. Dashboard analytics
   getDashboardAnalytics: async (request, h) => {
     try {
       const { period = 'today' } = request.query;
@@ -1070,15 +1033,22 @@ const reportController = {
           raw: true,
         }),
 
-        // Student statistics
+        // Student statistics - Fixed query
         User.findOne({
-          include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              where: { name: 'student' },
+              attributes: [], // Don't select role attributes to avoid GROUP BY issues
+            },
+          ],
           attributes: [
             [fn('COUNT', col('User.id')), 'total_students'],
             [fn('SUM', col('Balance')), 'total_balance'],
             [fn('AVG', col('Balance')), 'average_balance'],
             [
-              fn('COUNT', literal('CASE WHEN "Balance" > 0 THEN 1 END')),
+              fn('SUM', literal('CASE WHEN Balance > 0 THEN 1 ELSE 0 END')),
               'students_with_balance',
             ],
           ],
@@ -1132,17 +1102,24 @@ const reportController = {
           limit: 10,
         }),
 
-        // Balance distribution for pie chart
+        // Balance distribution for pie chart - Fixed query
         User.findAll({
-          include: [{ model: Role, as: 'role', where: { name: 'student' } }],
+          include: [
+            {
+              model: Role,
+              as: 'role',
+              where: { name: 'student' },
+              attributes: [], // Don't select role attributes
+            },
+          ],
           attributes: [
             [
               literal(`
                   CASE 
-                    WHEN "Balance" = 0 THEN 'Zero'
-                    WHEN "Balance" > 0 AND "Balance" <= 10000 THEN 'Low (1-10K)'
-                    WHEN "Balance" > 10000 AND "Balance" <= 50000 THEN 'Medium (10K-50K)'
-                    WHEN "Balance" > 50000 THEN 'High (>50K)'
+                    WHEN Balance = 0 THEN 'Zero'
+                    WHEN Balance > 0 AND Balance <= 10000 THEN 'Low (1-10K)'
+                    WHEN Balance > 10000 AND Balance <= 50000 THEN 'Medium (10K-50K)'
+                    WHEN Balance > 50000 THEN 'High (>50K)'
                   END
                 `),
               'range',
@@ -1152,17 +1129,17 @@ const reportController = {
           group: [
             literal(`
                 CASE 
-                  WHEN "Balance" = 0 THEN 'Zero'
-                  WHEN "Balance" > 0 AND "Balance" <= 10000 THEN 'Low (1-10K)'
-                  WHEN "Balance" > 10000 AND "Balance" <= 50000 THEN 'Medium (10K-50K)'
-                  WHEN "Balance" > 50000 THEN 'High (>50K)'
-                                    END
-                                  `),
+                  WHEN Balance = 0 THEN 'Zero'
+                  WHEN Balance > 0 AND Balance <= 10000 THEN 'Low (1-10K)'
+                  WHEN Balance > 10000 AND Balance <= 50000 THEN 'Medium (10K-50K)'
+                  WHEN Balance > 50000 THEN 'High (>50K)'
+                END
+              `),
           ],
           raw: true,
         }),
 
-        // Hourly transaction pattern (for today only)
+        // Hourly transaction pattern (for today only) - MySQL version
         period === 'today'
           ? Transaksi.findAll({
               where: {
@@ -1176,11 +1153,11 @@ const reportController = {
                 status: 'completed',
               },
               attributes: [
-                [fn('EXTRACT', literal('HOUR FROM "createdAt"')), 'hour'],
+                [fn('HOUR', col('createdAt')), 'hour'],
                 [fn('COUNT', col('id')), 'count'],
               ],
-              group: [fn('EXTRACT', literal('HOUR FROM "createdAt"'))],
-              order: [[fn('EXTRACT', literal('HOUR FROM "createdAt"')), 'ASC']],
+              group: [fn('HOUR', col('createdAt'))],
+              order: [[fn('HOUR', col('createdAt')), 'ASC']],
               raw: true,
             })
           : Promise.resolve([]),
@@ -1304,7 +1281,7 @@ const reportController = {
     }
   },
 
-  // 9. Comparative report - Perbandingan periode
+  // 9. Perbandingan periode
   getComparativeReport: async (request, h) => {
     try {
       const {

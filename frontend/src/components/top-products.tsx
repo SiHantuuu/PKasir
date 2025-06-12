@@ -1,59 +1,62 @@
-import { Package, Coffee, Book, Apple, Utensils } from "lucide-react"
+import { Progress } from '@/components/ui/progress';
 
-export function TopProducts() {
-  // Mock data for top products
-  const products = [
-    {
-      id: 1,
-      name: "Nasi Goreng",
-      category: "Makanan",
-      sales: 95,
-      icon: Utensils,
-    },
-    {
-      id: 2,
-      name: "Es Teh",
-      category: "Minuman",
-      sales: 87,
-      icon: Coffee,
-    },
-    {
-      id: 3,
-      name: "Buku Tulis",
-      category: "Alat Tulis",
-      sales: 76,
-      icon: Book,
-    },
-    {
-      id: 4,
-      name: "Roti",
-      category: "Makanan",
-      sales: 68,
-      icon: Apple,
-    },
-    {
-      id: 5,
-      name: "Pensil 2B",
-      category: "Alat Tulis",
-      sales: 52,
-      icon: Package,
-    },
-  ]
+interface BestSellingProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  total_sold: number;
+  total_revenue: number;
+}
+
+interface TopProductsProps {
+  products: BestSellingProduct[];
+}
+
+export function TopProducts({ products }: TopProductsProps) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No product data available
+      </div>
+    );
+  }
+
+  const maxSold = Math.max(...products.map((p) => p.total_sold));
 
   return (
     <div className="space-y-4">
       {products.map((product) => (
-        <div key={product.id} className="flex items-center">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
-            <product.icon className="h-5 w-5 text-muted-foreground" />
+        <div key={product.product_id} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium leading-none">
+                {product.product_name}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {product.category || 'No Category'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium">{product.total_sold} sold</p>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(product.total_revenue)}
+              </p>
+            </div>
           </div>
-          <div className="ml-4 space-y-1">
-            <p className="text-sm font-medium leading-none">{product.name}</p>
-            <p className="text-sm text-muted-foreground">{product.category}</p>
-          </div>
-          <div className="ml-auto font-medium">{product.sales} sales</div>
+          <Progress
+            value={(product.total_sold / maxSold) * 100}
+            className="h-2"
+          />
         </div>
       ))}
     </div>
-  )
+  );
 }

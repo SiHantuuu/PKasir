@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import {
   Card,
@@ -15,21 +18,338 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowUpRight,
-  BarChart3,
   DollarSign,
   Download,
   Package,
   Search,
   Users,
   ShoppingCart,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RecentTransactions } from '@/components/recent-transactions';
 import { TopProducts } from '@/components/top-products';
 import { RecentStudents } from '@/components/recent-students';
+import { TransactionChart } from '@/components/transaction-chart';
+import { StudentsTable } from '@/components/students-table';
+import { ProductsTable } from '@/components/products-table';
+import { TransactionsTable } from '@/components/transactions-table';
+
+// Types
+interface DashboardData {
+  total_students: number;
+  total_balance: number;
+  total_transactions: number;
+  today_transactions: number;
+  total_revenue: number;
+}
+
+interface Transaction {
+  id: number;
+  Transaction_type: string;
+  total_amount: number;
+  createdAt: string;
+  status: string;
+  customer: {
+    Nama: string;
+    NIS: string;
+  };
+}
+
+interface Student {
+  id: number;
+  NIS: string;
+  NISN: string;
+  Nama: string;
+  username: string;
+  Balance: number;
+  is_active: boolean;
+  createdAt: string;
+}
+
+interface Product {
+  id: number;
+  Nama: string;
+  Harga: number;
+  Stok: number;
+  category?: {
+    Nama: string;
+  };
+}
+
+interface BestSellingProduct {
+  product_id: number;
+  product_name: string;
+  category: string;
+  total_sold: number;
+  total_revenue: number;
+}
+
+// Add new interface for transaction summary
+interface TransactionSummary {
+  by_transaction_type: {
+    [key: string]: {
+      count: number;
+      total_amount: number;
+      average_amount: number;
+    };
+  };
+  daily_breakdown: Array<{
+    date: string;
+    transaction_count: number;
+    total_amount: number;
+  }>;
+}
 
 export default function AdminDashboard() {
+  // State for dashboard data
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    []
+  );
+  const [recentStudents, setRecentStudents] = useState<Student[]>([]);
+  const [topProducts, setTopProducts] = useState<BestSellingProduct[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+
+  // Add new state for transaction summary
+  const [transactionSummary, setTransactionSummary] =
+    useState<TransactionSummary | null>(null);
+
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+
+  // Error states
+  const [error, setError] = useState<string | null>(null);
+
+  // API Base URL - adjust according to your backend
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  // Fetch dashboard analytics
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/report/dashboard?period=today`
+      );
+      if (!response.ok) throw new Error('Failed to fetch dashboard data');
+
+      const result = await response.json();
+      if (result.success) {
+        const data = result.data;
+        setDashboardData({
+          total_students: data.students.total_students,
+          total_balance: data.students.total_balance,
+          total_transactions: data.overview.total_transactions,
+          today_transactions: data.transactions.summary.purchase?.count || 0,
+          total_revenue: data.transactions.summary.purchase?.total_amount || 0,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    }
+  };
+
+  // Add new function to fetch transaction summary
+  const fetchTransactionSummary = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/report/transaction-summary?period=all`
+      );
+      if (!response.ok) throw new Error('Failed to fetch transaction summary');
+
+      const result = await response.json();
+      if (result.success) {
+        setTransactionSummary(result.data);
+      }
+    } catch (err) {
+      console.error('Error fetching transaction summary:', err);
+    }
+  };
+
+  // Fetch recent transactions
+  const fetchRecentTransactions = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/transactions?limit=10&sortOrder=DESC`
+      );
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+
+      const result = await response.json();
+      if (result.success) {
+        setRecentTransactions(result.data.transactions);
+      }
+    } catch (err) {
+      console.error('Error fetching recent transactions:', err);
+    }
+  };
+
+  // Fetch recent students
+  const fetchRecentStudents = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/siswa?limit=10&sortBy=createdAt&sortOrder=DESC`
+      );
+      if (!response.ok) throw new Error('Failed to fetch students');
+
+      const result = await response.json();
+      if (result.success) {
+        setRecentStudents(result.data.siswa);
+      }
+    } catch (err) {
+      console.error('Error fetching recent students:', err);
+    }
+  };
+
+  // Fetch top products
+  const fetchTopProducts = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/reports/best-selling-products?limit=5`
+      );
+      if (!response.ok) throw new Error('Failed to fetch top products');
+
+      const result = await response.json();
+      if (result.success) {
+        setTopProducts(result.data.best_selling_products);
+      }
+    } catch (err) {
+      console.error('Error fetching top products:', err);
+    }
+  };
+
+  // Fetch all students for students tab
+  const fetchAllStudents = async () => {
+    setStudentsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/siswa?limit=50`);
+      if (!response.ok) throw new Error('Failed to fetch all students');
+
+      const result = await response.json();
+      if (result.success) {
+        setAllStudents(result.data.siswa);
+      }
+    } catch (err) {
+      console.error('Error fetching all students:', err);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  // Fetch all products for products tab
+  const fetchAllProducts = async () => {
+    setProductsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/products?limit=50`);
+      if (!response.ok) throw new Error('Failed to fetch all products');
+
+      const result = await response.json();
+      if (result.success) {
+        setAllProducts(result.data.products);
+      }
+    } catch (err) {
+      console.error('Error fetching all products:', err);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  // Fetch all transactions for transactions tab
+  const fetchAllTransactions = async () => {
+    setTransactionsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/transactions?limit=50`);
+      if (!response.ok) throw new Error('Failed to fetch all transactions');
+
+      const result = await response.json();
+      if (result.success) {
+        setAllTransactions(result.data.transactions);
+      }
+    } catch (err) {
+      console.error('Error fetching all transactions:', err);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  // Initial data load
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchDashboardData(),
+        fetchRecentTransactions(),
+        fetchRecentStudents(),
+        fetchTopProducts(),
+        fetchTransactionSummary(), // Add this line
+      ]);
+      setLoading(false);
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Handle tab changes to load data on demand
+  const handleTabChange = (value: string) => {
+    switch (value) {
+      case 'students':
+        if (allStudents.length === 0) {
+          fetchAllStudents();
+        }
+        break;
+      case 'products':
+        if (allProducts.length === 0) {
+          fetchAllProducts();
+        }
+        break;
+      case 'transactions':
+        if (allTransactions.length === 0) {
+          fetchAllTransactions();
+        }
+        break;
+    }
+  };
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <AppSidebar isLoggedIn={true} isAdmin={true} />
+        <SidebarInset>
+          <div className="flex h-screen items-center justify-center">
+            <div className="flex items-center space-x-2">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span>Loading dashboard...</span>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <SidebarProvider>
+        <AppSidebar isLoggedIn={true} isAdmin={true} />
+        <SidebarInset>
+          <div className="flex h-screen items-center justify-center">
+            <div className="text-center">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar isLoggedIn={true} isAdmin={true} />
@@ -59,7 +379,11 @@ export default function AdminDashboard() {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
-          <Tabs defaultValue="overview" className="space-y-4">
+          <Tabs
+            defaultValue="overview"
+            className="space-y-4"
+            onValueChange={handleTabChange}
+          >
             <div className="flex items-center justify-between">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -74,6 +398,7 @@ export default function AdminDashboard() {
                 </Button>
               </div>
             </div>
+
             <TabsContent value="overview" className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
@@ -84,9 +409,13 @@ export default function AdminDashboard() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">Rp 45,231,890</div>
+                    <div className="text-2xl font-bold">
+                      Rp{' '}
+                      {dashboardData?.total_balance?.toLocaleString('id-ID') ||
+                        '0'}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      +20.1% from last month
+                      Total saldo semua siswa
                     </p>
                   </CardContent>
                 </Card>
@@ -98,9 +427,11 @@ export default function AdminDashboard() {
                     <Users className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">1,250</div>
+                    <div className="text-2xl font-bold">
+                      {dashboardData?.total_students || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      +15 new students this month
+                      Siswa terdaftar
                     </p>
                   </CardContent>
                 </Card>
@@ -112,9 +443,11 @@ export default function AdminDashboard() {
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">245</div>
+                    <div className="text-2xl font-bold">
+                      {allProducts.length || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      +12 new products added
+                      Produk tersedia
                     </p>
                   </CardContent>
                 </Card>
@@ -126,28 +459,27 @@ export default function AdminDashboard() {
                     <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">+173</div>
+                    <div className="text-2xl font-bold">
+                      {dashboardData?.today_transactions || 0}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      +24% from yesterday
+                      Transaksi hari ini
                     </p>
                   </CardContent>
                 </Card>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-4">
                   <CardHeader>
                     <CardTitle>Transaction Overview</CardTitle>
                     <CardDescription>
-                      Daily transactions for the current month
+                      Transaction summary by type
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pl-2">
-                    <div className="h-[240px] w-full flex items-center justify-center">
-                      <BarChart3 className="h-16 w-16 text-muted-foreground/50" />
-                      <span className="ml-2 text-sm text-muted-foreground">
-                        Transaction chart will appear here
-                      </span>
-                    </div>
+                    {/* Pass the transaction summary data instead of recent transactions */}
+                    <TransactionChart data={transactionSummary} />
                   </CardContent>
                 </Card>
                 <Card className="col-span-3">
@@ -158,10 +490,11 @@ export default function AdminDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RecentTransactions />
+                    <RecentTransactions transactions={recentTransactions} />
                   </CardContent>
                 </Card>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card className="col-span-2">
                   <CardHeader>
@@ -171,7 +504,7 @@ export default function AdminDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <RecentStudents />
+                    <RecentStudents students={recentStudents} />
                   </CardContent>
                 </Card>
                 <Card>
@@ -182,11 +515,12 @@ export default function AdminDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TopProducts />
+                    <TopProducts products={topProducts} />
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
+
             <TabsContent value="students" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -196,12 +530,18 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Student management interface will appear here
-                  </p>
+                  {studentsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading students...
+                    </div>
+                  ) : (
+                    <StudentsTable students={allStudents} />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="products" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -211,12 +551,18 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Product management interface will appear here
-                  </p>
+                  {productsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading products...
+                    </div>
+                  ) : (
+                    <ProductsTable products={allProducts} />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="transactions" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -226,9 +572,14 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Transaction history interface will appear here
-                  </p>
+                  {transactionsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading transactions...
+                    </div>
+                  ) : (
+                    <TransactionsTable transactions={allTransactions} />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

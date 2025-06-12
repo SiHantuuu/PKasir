@@ -1,82 +1,77 @@
-import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
-export function RecentStudents() {
-  // Mock data for recent students
-  const students = [
-    {
-      id: 1,
-      nis: "2023001",
-      nisn: "9876543210",
-      name: "Ahmad Rizky",
-      gender: "L",
-      balance: 250000,
-      status: "active",
-    },
-    {
-      id: 2,
-      nis: "2023002",
-      nisn: "9876543211",
-      name: "Siti Nuraini",
-      gender: "P",
-      balance: 175000,
-      status: "active",
-    },
-    {
-      id: 3,
-      nis: "2023003",
-      nisn: "9876543212",
-      name: "Budi Santoso",
-      gender: "L",
-      balance: 125000,
-      status: "active",
-    },
-    {
-      id: 4,
-      nis: "2023004",
-      nisn: "9876543213",
-      name: "Dewi Lestari",
-      gender: "P",
-      balance: 300000,
-      status: "active",
-    },
-    {
-      id: 5,
-      nis: "2023005",
-      nisn: "9876543214",
-      name: "Eko Prasetyo",
-      gender: "L",
-      balance: 50000,
-      status: "low_balance",
-    },
-  ]
+interface Student {
+  id: number;
+  NIS: string;
+  NISN: string;
+  Nama: string;
+  username: string;
+  Balance: number;
+  is_active: boolean;
+  createdAt: string;
+}
+
+interface RecentStudentsProps {
+  students: Student[];
+}
+
+export function RecentStudents({ students }: RecentStudentsProps) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  if (students.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No recent students found
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-5 text-sm text-muted-foreground">
-        <div>NIS</div>
-        <div>Name</div>
-        <div>Gender</div>
-        <div>Status</div>
-        <div className="text-right">Balance</div>
-      </div>
-      <Separator />
       {students.map((student) => (
-        <div key={student.id} className="grid grid-cols-5 text-sm">
-          <div>{student.nis}</div>
-          <div className="font-medium">{student.name}</div>
-          <div>{student.gender}</div>
-          <div>
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                student.status === "active" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-              }`}
-            >
-              {student.status === "active" ? "Active" : "Low Balance"}
-            </span>
+        <div key={student.id} className="flex items-center space-x-4">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback>{student.Nama.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium leading-none">{student.Nama}</p>
+            <div className="flex items-center space-x-2">
+              <p className="text-xs text-muted-foreground">
+                NIS: {student.NIS}
+              </p>
+              <Badge
+                variant={student.is_active ? 'default' : 'secondary'}
+                className="text-xs"
+              >
+                {student.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
           </div>
-          <div className="text-right font-medium">Rp {student.balance.toLocaleString()}</div>
+          <div className="text-right">
+            <p className="text-sm font-medium">
+              {formatCurrency(student.Balance)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {formatDate(student.createdAt)}
+            </p>
+          </div>
         </div>
       ))}
     </div>
-  )
+  );
 }
