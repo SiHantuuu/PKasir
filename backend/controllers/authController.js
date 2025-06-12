@@ -177,6 +177,7 @@ const authController = {
             { username: identifier },
             { NIS: identifier },
             { NISN: identifier },
+            { NFC_id: identifier },
           ],
         },
         include: [{ model: Role, as: 'role' }],

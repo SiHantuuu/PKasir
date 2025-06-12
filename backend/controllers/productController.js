@@ -1,7 +1,7 @@
 // controllers/productController.js
-const { Produk, Category, Transaction_detail } = require("../models");
-const { Op } = require("sequelize");
-const Boom = require("@hapi/boom");
+const { Produk, Category, Transaction_detail } = require('../models');
+const { Op } = require('sequelize');
+const Boom = require('@hapi/boom');
 
 // Helper function untuk response format
 const sendResponse = (h, status, success, message, data = null) => {
@@ -24,7 +24,7 @@ const produkController = {
       if (Category_id) {
         const category = await Category.findByPk(Category_id);
         if (!category) {
-          throw Boom.notFound("Kategori tidak ditemukan");
+          throw Boom.notFound('Kategori tidak ditemukan');
         }
       }
 
@@ -39,7 +39,7 @@ const produkController = {
       });
 
       if (existingProduct) {
-        throw Boom.conflict("Produk dengan nama tersebut sudah ada");
+        throw Boom.conflict('Produk dengan nama tersebut sudah ada');
       }
 
       // Buat produk baru
@@ -55,8 +55,8 @@ const produkController = {
         include: [
           {
             model: Category,
-            as: "category",
-            attributes: ["id", "Nama"],
+            as: 'category',
+            attributes: ['id', 'Nama'],
           },
         ],
       });
@@ -65,15 +65,15 @@ const produkController = {
         h,
         201,
         true,
-        "Produk berhasil dibuat",
+        'Produk berhasil dibuat',
         productWithCategory
       );
     } catch (error) {
-      console.error("Error in createProduct:", error);
+      console.error('Error in createProduct:', error);
       if (error.isBoom) {
         throw error;
       }
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
@@ -86,14 +86,14 @@ const produkController = {
       // Cari produk berdasarkan ID
       const product = await Produk.findByPk(id);
       if (!product) {
-        throw Boom.notFound("Produk tidak ditemukan");
+        throw Boom.notFound('Produk tidak ditemukan');
       }
 
       // Validasi kategori jika ada dan berubah
       if (Category_id && Category_id !== product.Category_id) {
         const category = await Category.findByPk(Category_id);
         if (!category) {
-          throw Boom.notFound("Kategori tidak ditemukan");
+          throw Boom.notFound('Kategori tidak ditemukan');
         }
       }
 
@@ -111,7 +111,7 @@ const produkController = {
         });
 
         if (existingProduct) {
-          throw Boom.conflict("Produk dengan nama tersebut sudah ada");
+          throw Boom.conflict('Produk dengan nama tersebut sudah ada');
         }
       }
 
@@ -131,8 +131,8 @@ const produkController = {
         include: [
           {
             model: Category,
-            as: "category",
-            attributes: ["id", "Nama"],
+            as: 'category',
+            attributes: ['id', 'Nama'],
           },
         ],
       });
@@ -141,19 +141,95 @@ const produkController = {
         h,
         200,
         true,
-        "Produk berhasil diperbarui",
+        'Produk berhasil diperbarui',
         updatedProduct
       );
     } catch (error) {
-      console.error("Error in updateProduct:", error);
+      console.error('Error in updateProduct:', error);
       if (error.isBoom) {
         throw error;
       }
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
-  // 3. Get Product By ID
+  // 3. Get Product By ID atau Name
+  getProduct: async (request, h) => {
+    try {
+      const { identifier } = request.params; // bisa ID atau nama
+      const { includeTransactions = false } = request.query;
+
+      let includeOptions = [
+        {
+          model: Category,
+          as: 'category',
+          attributes: ['id', 'Nama'],
+        },
+      ];
+
+      // Jika diminta, sertakan riwayat transaksi
+      if (includeTransactions === 'true') {
+        includeOptions.push({
+          model: Transaction_detail,
+          as: 'transaction_details',
+          attributes: ['id', 'Transaction_id', 'amount', 'createdAt'],
+          include: [
+            {
+              model: require('../models').Transaksi,
+              as: 'transaction',
+              attributes: [
+                'id',
+                'Transaction_type',
+                'total_amount',
+                'createdAt',
+              ],
+            },
+          ],
+        });
+      }
+
+      let product;
+
+      // Coba cari berdasarkan ID terlebih dahulu (jika identifier adalah angka)
+      if (!isNaN(identifier)) {
+        product = await Produk.findByPk(identifier, {
+          include: includeOptions,
+        });
+      }
+
+      // Jika tidak ditemukan berdasarkan ID atau identifier bukan angka, cari berdasarkan nama
+      if (!product) {
+        product = await Produk.findOne({
+          where: {
+            Nama: {
+              [Op.like]: identifier.trim(),
+            },
+          },
+          include: includeOptions,
+        });
+      }
+
+      if (!product) {
+        throw Boom.notFound('Produk tidak ditemukan');
+      }
+
+      return sendResponse(
+        h,
+        200,
+        true,
+        'Data produk berhasil diambil',
+        product
+      );
+    } catch (error) {
+      console.error('Error in getProduct:', error);
+      if (error.isBoom) {
+        throw error;
+      }
+      throw Boom.internal('Terjadi kesalahan server', error.message);
+    }
+  },
+
+  // 3b. Get Product By ID (tetap ada untuk backward compatibility)
   getProductById: async (request, h) => {
     try {
       const { id } = request.params;
@@ -162,26 +238,26 @@ const produkController = {
       let includeOptions = [
         {
           model: Category,
-          as: "category",
-          attributes: ["id", "Nama"],
+          as: 'category',
+          attributes: ['id', 'Nama'],
         },
       ];
 
       // Jika diminta, sertakan riwayat transaksi
-      if (includeTransactions === "true") {
+      if (includeTransactions === 'true') {
         includeOptions.push({
           model: Transaction_detail,
-          as: "transaction_details",
-          attributes: ["id", "Transaction_id", "amount", "createdAt"],
+          as: 'transaction_details',
+          attributes: ['id', 'Transaction_id', 'amount', 'createdAt'],
           include: [
             {
-              model: require("../models").Transaksi,
-              as: "transaction",
+              model: require('../models').Transaksi,
+              as: 'transaction',
               attributes: [
-                "id",
-                "Transaction_type",
-                "total_amount",
-                "createdAt",
+                'id',
+                'Transaction_type',
+                'total_amount',
+                'createdAt',
               ],
             },
           ],
@@ -193,22 +269,161 @@ const produkController = {
       });
 
       if (!product) {
-        throw Boom.notFound("Produk tidak ditemukan");
+        throw Boom.notFound('Produk tidak ditemukan');
       }
 
       return sendResponse(
         h,
         200,
         true,
-        "Data produk berhasil diambil",
+        'Data produk berhasil diambil',
         product
       );
     } catch (error) {
-      console.error("Error in getProductById:", error);
+      console.error('Error in getProductById:', error);
       if (error.isBoom) {
         throw error;
       }
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
+    }
+  },
+
+  // 3c. Get Product By Name
+  getProductByName: async (request, h) => {
+    try {
+      const { name } = request.params;
+      const { includeTransactions = false, exactMatch = false } = request.query;
+
+      let includeOptions = [
+        {
+          model: Category,
+          as: 'category',
+          attributes: ['id', 'Nama'],
+        },
+      ];
+
+      if (includeTransactions === 'true') {
+        includeOptions.push({
+          model: Transaction_detail,
+          as: 'transaction_details',
+          attributes: ['id', 'Transaction_id', 'amount', 'createdAt'],
+          include: [
+            {
+              model: require('../models').Transaksi,
+              as: 'transaction',
+              attributes: [
+                'id',
+                'Transaction_type',
+                'total_amount',
+                'createdAt',
+              ],
+            },
+          ],
+        });
+      }
+
+      // Pilihan pencarian: exact match atau like search
+      let whereCondition;
+      if (exactMatch === 'true') {
+        whereCondition = {
+          Nama: name.trim(),
+        };
+      } else {
+        whereCondition = {
+          Nama: {
+            [Op.like]: `%${name.trim()}%`,
+          },
+        };
+      }
+
+      const product = await Produk.findOne({
+        where: whereCondition,
+        include: includeOptions,
+      });
+
+      if (!product) {
+        throw Boom.notFound('Produk tidak ditemukan');
+      }
+
+      return sendResponse(
+        h,
+        200,
+        true,
+        'Data produk berhasil diambil',
+        product
+      );
+    } catch (error) {
+      console.error('Error in getProductByName:', error);
+      if (error.isBoom) {
+        throw error;
+      }
+      throw Boom.internal('Terjadi kesalahan server', error.message);
+    }
+  },
+
+  // NEW: Batch Get Products By Names (untuk AI model)
+  getProductsByNames: async (request, h) => {
+    try {
+      const { products } = request.payload; // Expected format: {"Pocky": 1, "Pringles": 1}
+      const { exactMatch = true } = request.query;
+
+      const productNames = Object.keys(products);
+      const results = {};
+      const notFound = [];
+
+      for (const productName of productNames) {
+        try {
+          let whereCondition;
+          if (exactMatch === 'true') {
+            whereCondition = {
+              Nama: productName.trim(),
+            };
+          } else {
+            whereCondition = {
+              Nama: {
+                [Op.like]: `%${productName.trim()}%`,
+              },
+            };
+          }
+
+          const product = await Produk.findOne({
+            where: whereCondition,
+            include: [
+              {
+                model: Category,
+                as: 'category',
+                attributes: ['id', 'Nama'],
+              },
+            ],
+          });
+
+          if (product) {
+            results[productName] = {
+              ...product.toJSON(),
+              requestedQuantity: products[productName],
+              available: product.Stok >= products[productName],
+            };
+          } else {
+            notFound.push(productName);
+          }
+        } catch (error) {
+          console.error(`Error processing product ${productName}:`, error);
+          notFound.push(productName);
+        }
+      }
+
+      return sendResponse(h, 200, true, 'Pencarian produk selesai', {
+        found: results,
+        notFound,
+        summary: {
+          totalRequested: productNames.length,
+          found: Object.keys(results).length,
+          notFound: notFound.length,
+        },
+      });
+    } catch (error) {
+      console.error('Error in getProductsByNames:', error);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
@@ -218,14 +433,14 @@ const produkController = {
       const {
         page = 1,
         limit = 10,
-        search = "",
-        category_id = "",
-        min_price = "",
-        max_price = "",
-        min_stock = "",
-        max_stock = "",
-        sortBy = "createdAt",
-        sortOrder = "DESC",
+        search = '',
+        category_id = '',
+        min_price = '',
+        max_price = '',
+        min_stock = '',
+        max_stock = '',
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
         includeCategory = true,
       } = request.query;
 
@@ -262,29 +477,29 @@ const produkController = {
 
       // Build include options
       let includeOptions = [];
-      if (includeCategory === "true") {
+      if (includeCategory === 'true') {
         includeOptions.push({
           model: Category,
-          as: "category",
-          attributes: ["id", "Nama"],
+          as: 'category',
+          attributes: ['id', 'Nama'],
         });
       }
 
       // Validasi sortBy
       const allowedSortFields = [
-        "id",
-        "Nama",
-        "Harga",
-        "Stok",
-        "createdAt",
-        "updatedAt",
+        'id',
+        'Nama',
+        'Harga',
+        'Stok',
+        'createdAt',
+        'updatedAt',
       ];
       const validSortBy = allowedSortFields.includes(sortBy)
         ? sortBy
-        : "createdAt";
-      const validSortOrder = ["ASC", "DESC"].includes(sortOrder.toUpperCase())
+        : 'createdAt';
+      const validSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase())
         ? sortOrder.toUpperCase()
-        : "DESC";
+        : 'DESC';
 
       const { count, rows } = await Produk.findAndCountAll({
         where: whereClause,
@@ -296,7 +511,7 @@ const produkController = {
 
       const totalPages = Math.ceil(count / parseInt(limit));
 
-      return sendResponse(h, 200, true, "Data produk berhasil diambil", {
+      return sendResponse(h, 200, true, 'Data produk berhasil diambil', {
         products: rows,
         pagination: {
           currentPage: parseInt(page),
@@ -306,8 +521,8 @@ const produkController = {
         },
       });
     } catch (error) {
-      console.error("Error in getAllProducts:", error);
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      console.error('Error in getAllProducts:', error);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
@@ -322,14 +537,14 @@ const produkController = {
         include: [
           {
             model: Category,
-            as: "category",
-            attributes: ["id", "Nama"],
+            as: 'category',
+            attributes: ['id', 'Nama'],
           },
         ],
       });
 
       if (!product) {
-        throw Boom.notFound("Produk tidak ditemukan");
+        throw Boom.notFound('Produk tidak ditemukan');
       }
 
       // Cek apakah produk pernah ditransaksikan
@@ -337,7 +552,7 @@ const produkController = {
         where: { Product_id: id },
       });
 
-      if (transactionCount > 0 && force !== "true") {
+      if (transactionCount > 0 && force !== 'true') {
         throw Boom.badRequest(
           `Produk tidak dapat dihapus karena sudah pernah ditransaksikan ${transactionCount} kali. Gunakan parameter force=true untuk menghapus paksa (detail transaksi akan kehilangan referensi produk).`,
           { transactionCount }
@@ -345,7 +560,7 @@ const produkController = {
       }
 
       // Jika force delete, update transaction_detail untuk menghilangkan referensi produk
-      if (transactionCount > 0 && force === "true") {
+      if (transactionCount > 0 && force === 'true') {
         await Transaction_detail.update(
           { Product_id: null },
           { where: { Product_id: id } }
@@ -358,51 +573,68 @@ const produkController = {
       const message =
         transactionCount > 0
           ? `Produk berhasil dihapus dan ${transactionCount} detail transaksi telah dilepas dari produk ini`
-          : "Produk berhasil dihapus";
+          : 'Produk berhasil dihapus';
 
       return sendResponse(h, 200, true, message, {
         deletedProduct: product,
         affectedTransactions: transactionCount,
       });
     } catch (error) {
-      console.error("Error in deleteProduct:", error);
+      console.error('Error in deleteProduct:', error);
       if (error.isBoom) {
         throw error;
       }
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
-  // 6. Update Stock (untuk transaksi)
+  // 6. Update Stock (untuk transaksi) - bisa menggunakan ID atau nama
   updateStock: async (request, h) => {
     try {
-      const { id } = request.params;
+      const { identifier } = request.params; // bisa ID atau nama
       const { amount, type } = request.payload;
 
-      const product = await Produk.findByPk(id);
+      let product;
+
+      // Coba cari berdasarkan ID terlebih dahulu
+      if (!isNaN(identifier)) {
+        product = await Produk.findByPk(identifier);
+      }
+
+      // Jika tidak ditemukan berdasarkan ID, cari berdasarkan nama
       if (!product) {
-        throw Boom.notFound("Produk tidak ditemukan");
+        product = await Produk.findOne({
+          where: {
+            Nama: {
+              [Op.like]: identifier.trim(),
+            },
+          },
+        });
+      }
+
+      if (!product) {
+        throw Boom.notFound('Produk tidak ditemukan');
       }
 
       let newStock;
-      if (type === "add") {
+      if (type === 'add') {
         newStock = product.Stok + parseInt(amount);
-      } else if (type === "subtract") {
+      } else if (type === 'subtract') {
         newStock = product.Stok - parseInt(amount);
         if (newStock < 0) {
-          throw Boom.badRequest("Stok tidak mencukupi");
+          throw Boom.badRequest('Stok tidak mencukupi');
         }
       }
 
       await product.update({ Stok: newStock });
 
       // Ambil data terbaru
-      const updatedProduct = await Produk.findByPk(id, {
+      const updatedProduct = await Produk.findByPk(product.id, {
         include: [
           {
             model: Category,
-            as: "category",
-            attributes: ["id", "Nama"],
+            as: 'category',
+            attributes: ['id', 'Nama'],
           },
         ],
       });
@@ -411,15 +643,15 @@ const produkController = {
         h,
         200,
         true,
-        `Stok berhasil ${type === "add" ? "ditambah" : "dikurangi"}`,
+        `Stok berhasil ${type === 'add' ? 'ditambah' : 'dikurangi'}`,
         updatedProduct
       );
     } catch (error) {
-      console.error("Error in updateStock:", error);
+      console.error('Error in updateStock:', error);
       if (error.isBoom) {
         throw error;
       }
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
@@ -429,11 +661,11 @@ const produkController = {
       const { threshold = 10, includeCategory = true } = request.query;
 
       let includeOptions = [];
-      if (includeCategory === "true") {
+      if (includeCategory === 'true') {
         includeOptions.push({
           model: Category,
-          as: "category",
-          attributes: ["id", "Nama"],
+          as: 'category',
+          attributes: ['id', 'Nama'],
         });
       }
 
@@ -444,7 +676,7 @@ const produkController = {
           },
         },
         include: includeOptions,
-        order: [["Stok", "ASC"]],
+        order: [['Stok', 'ASC']],
       });
 
       return sendResponse(
@@ -455,8 +687,8 @@ const produkController = {
         lowStockProducts
       );
     } catch (error) {
-      console.error("Error in getLowStockProducts:", error);
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      console.error('Error in getLowStockProducts:', error);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 
@@ -474,26 +706,26 @@ const produkController = {
           const product = await Produk.findByPk(id);
 
           if (!product) {
-            errors_bulk.push({ id, error: "Produk tidak ditemukan" });
+            errors_bulk.push({ id, error: 'Produk tidak ditemukan' });
             continue;
           }
 
           await product.update(updates);
-          results.push({ id, status: "updated" });
+          results.push({ id, status: 'updated' });
         } catch (error) {
           errors_bulk.push({ id: item.id, error: error.message });
         }
       }
 
-      return sendResponse(h, 200, true, "Bulk update selesai", {
+      return sendResponse(h, 200, true, 'Bulk update selesai', {
         successCount: results.length,
         errorCount: errors_bulk.length,
         results,
         errors: errors_bulk,
       });
     } catch (error) {
-      console.error("Error in bulkUpdateProducts:", error);
-      throw Boom.internal("Terjadi kesalahan server", error.message);
+      console.error('Error in bulkUpdateProducts:', error);
+      throw Boom.internal('Terjadi kesalahan server', error.message);
     }
   },
 };

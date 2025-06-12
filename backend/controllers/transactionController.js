@@ -413,14 +413,33 @@ const transactionController = {
         type = 'all',
       } = request.query;
 
-      if (!siswaId || isNaN(parseInt(siswaId))) {
-        return Boom.badRequest('Invalid student ID');
+      if (!siswaId) {
+        return Boom.badRequest('Student identifier is required');
       }
 
-      // Pisahkan verifikasi student dengan query transactions
-      // Pertama, cek apakah student dengan ID ini ada dan memiliki role student
+      // Buat where clause untuk mencari berdasarkan ID, NIS, NISN, atau NFC_id
+      let studentWhereClause = {};
+
+      // Cek apakah siswaId adalah angka (ID)
+      if (!isNaN(parseInt(siswaId))) {
+        studentWhereClause = {
+          [Op.or]: [
+            { id: parseInt(siswaId) },
+            { NIS: siswaId },
+            { NISN: siswaId },
+            { NFC_id: siswaId },
+          ],
+        };
+      } else {
+        // Jika bukan angka, cari berdasarkan NIS, NISN, atau NFC_id
+        studentWhereClause = {
+          [Op.or]: [{ NIS: siswaId }, { NISN: siswaId }, { NFC_id: siswaId }],
+        };
+      }
+
+      // Cari student berdasarkan identifier yang diberikan
       const student = await User.findOne({
-        where: { id: parseInt(siswaId) },
+        where: studentWhereClause,
         include: [
           {
             model: Role,
@@ -436,14 +455,14 @@ const transactionController = {
       }
 
       const offset = (page - 1) * parseInt(limit);
-      const whereClause = { Customer_id: parseInt(siswaId) };
+      const whereClause = { Customer_id: student.id }; // Gunakan ID student yang ditemukan
 
       // Filter berdasarkan type jika bukan 'all'
       if (type !== 'all') {
         whereClause.Transaction_type = type;
       }
 
-      // Query transactions terpisah tanpa filter role yang ketat
+      // Query transactions menggunakan student ID yang sudah ditemukan
       const { count, rows: transactions } = await Transaksi.findAndCountAll({
         where: whereClause,
         include: [
@@ -478,6 +497,7 @@ const transactionController = {
               nama: student.Nama,
               nis: student.NIS,
               nisn: student.NISN || null,
+              nfc_id: student.NFC_id || null,
               balance: student.Balance,
             },
             transactions,

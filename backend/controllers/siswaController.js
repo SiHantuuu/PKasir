@@ -1,6 +1,6 @@
 // controllers/siswaController.js
-const { User, Role } = require("../models");
-const { Op } = require("sequelize");
+const { User, Role } = require('../models');
+const { Op } = require('sequelize');
 
 const siswaController = {
   // 1. Get all students
@@ -9,18 +9,18 @@ const siswaController = {
       const {
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        sortOrder = "DESC",
-        status = "all",
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
+        status = 'all',
       } = request.query;
 
       const offset = (page - 1) * parseInt(limit);
       const whereClause = {};
 
       // Filter by active status
-      if (status === "active") {
+      if (status === 'active') {
         whereClause.is_active = true;
-      } else if (status === "inactive") {
+      } else if (status === 'inactive') {
         whereClause.is_active = false;
       }
 
@@ -30,24 +30,24 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
-            attributes: ["id", "name"],
+            as: 'role',
+            where: { name: 'student' },
+            attributes: ['id', 'name'],
           },
         ],
         attributes: [
-          "id",
-          "NIS",
-          "NISN",
-          "username",
-          "email",
-          "Nama",
-          "Gen",
-          "NFC_id",
-          "Balance",
-          "is_active",
-          "createdAt",
-          "updatedAt",
+          'id',
+          'NIS',
+          'NISN',
+          'username',
+          'email',
+          'Nama',
+          'Gen',
+          'NFC_id',
+          'Balance',
+          'is_active',
+          'createdAt',
+          'updatedAt',
         ],
         order: [[sortBy, sortOrder.toUpperCase()]],
         limit: parseInt(limit),
@@ -59,7 +59,7 @@ const siswaController = {
       return h
         .response({
           success: true,
-          message: "Data siswa berhasil diambil",
+          message: 'Data siswa berhasil diambil',
           data: {
             siswa,
             pagination: {
@@ -74,15 +74,15 @@ const siswaController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting all siswa:", error);
+      console.error('Error getting all siswa:', error);
       return h
         .response({
           success: false,
-          message: "Gagal mengambil data siswa",
+          message: 'Gagal mengambil data siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }
@@ -97,7 +97,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "ID siswa tidak valid",
+            message: 'ID siswa tidak valid',
           })
           .code(400);
       }
@@ -107,24 +107,24 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
-            attributes: ["id", "name"],
+            as: 'role',
+            where: { name: 'student' },
+            attributes: ['id', 'name'],
           },
         ],
         attributes: [
-          "id",
-          "NIS",
-          "NISN",
-          "username",
-          "email",
-          "Nama",
-          "Gen",
-          "NFC_id",
-          "Balance",
-          "is_active",
-          "createdAt",
-          "updatedAt",
+          'id',
+          'NIS',
+          'NISN',
+          'username',
+          'email',
+          'Nama',
+          'Gen',
+          'NFC_id',
+          'Balance',
+          'is_active',
+          'createdAt',
+          'updatedAt',
         ],
       });
 
@@ -132,7 +132,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Data siswa tidak ditemukan",
+            message: 'Data siswa tidak ditemukan',
           })
           .code(404);
       }
@@ -140,20 +140,20 @@ const siswaController = {
       return h
         .response({
           success: true,
-          message: "Data siswa berhasil diambil",
+          message: 'Data siswa berhasil diambil',
           data: siswa,
         })
         .code(200);
     } catch (error) {
-      console.error("Error getting siswa by ID:", error);
+      console.error('Error getting siswa by ID:', error);
       return h
         .response({
           success: false,
-          message: "Gagal mengambil data siswa",
+          message: 'Gagal mengambil data siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }
@@ -166,15 +166,15 @@ const siswaController = {
         query,
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        sortOrder = "DESC",
+        sortBy = 'createdAt',
+        sortOrder = 'DESC',
       } = request.query;
 
       if (!query || query.trim().length === 0) {
         return h
           .response({
             success: false,
-            message: "Query pencarian tidak boleh kosong",
+            message: 'Query pencarian tidak boleh kosong',
           })
           .code(400);
       }
@@ -201,24 +201,24 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
-            attributes: ["id", "name"],
+            as: 'role',
+            where: { name: 'student' },
+            attributes: ['id', 'name'],
           },
         ],
         attributes: [
-          "id",
-          "NIS",
-          "NISN",
-          "username",
-          "email",
-          "Nama",
-          "Gen",
-          "NFC_id",
-          "Balance",
-          "is_active",
-          "createdAt",
-          "updatedAt",
+          'id',
+          'NIS',
+          'NISN',
+          'username',
+          'email',
+          'Nama',
+          'Gen',
+          'NFC_id',
+          'Balance',
+          'is_active',
+          'createdAt',
+          'updatedAt',
         ],
         order: [[sortBy, sortOrder.toUpperCase()]],
         limit: parseInt(limit),
@@ -246,15 +246,15 @@ const siswaController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error searching siswa:", error);
+      console.error('Error searching siswa:', error);
       return h
         .response({
           success: false,
-          message: "Gagal melakukan pencarian siswa",
+          message: 'Gagal melakukan pencarian siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }
@@ -270,7 +270,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "ID siswa tidak valid",
+            message: 'ID siswa tidak valid',
           })
           .code(400);
       }
@@ -280,8 +280,8 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
+            as: 'role',
+            where: { name: 'student' },
           },
         ],
       });
@@ -290,7 +290,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Data siswa tidak ditemukan",
+            message: 'Data siswa tidak ditemukan',
           })
           .code(404);
       }
@@ -299,7 +299,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Siswa sudah dalam status non-aktif",
+            message: 'Siswa sudah dalam status non-aktif',
           })
           .code(400);
       }
@@ -311,7 +311,7 @@ const siswaController = {
       return h
         .response({
           success: true,
-          message: "Siswa berhasil dinonaktifkan",
+          message: 'Siswa berhasil dinonaktifkan',
           data: {
             id: siswa.id,
             nama: siswa.Nama,
@@ -323,15 +323,15 @@ const siswaController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error deactivating siswa:", error);
+      console.error('Error deactivating siswa:', error);
       return h
         .response({
           success: false,
-          message: "Gagal menonaktifkan siswa",
+          message: 'Gagal menonaktifkan siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }
@@ -346,7 +346,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "ID siswa tidak valid",
+            message: 'ID siswa tidak valid',
           })
           .code(400);
       }
@@ -356,8 +356,8 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
+            as: 'role',
+            where: { name: 'student' },
           },
         ],
       });
@@ -366,7 +366,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Data siswa tidak ditemukan",
+            message: 'Data siswa tidak ditemukan',
           })
           .code(404);
       }
@@ -375,7 +375,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Siswa sudah dalam status aktif",
+            message: 'Siswa sudah dalam status aktif',
           })
           .code(400);
       }
@@ -387,7 +387,7 @@ const siswaController = {
       return h
         .response({
           success: true,
-          message: "Siswa berhasil diaktifkan kembali",
+          message: 'Siswa berhasil diaktifkan kembali',
           data: {
             id: siswa.id,
             nama: siswa.Nama,
@@ -398,15 +398,15 @@ const siswaController = {
         })
         .code(200);
     } catch (error) {
-      console.error("Error activating siswa:", error);
+      console.error('Error activating siswa:', error);
       return h
         .response({
           success: false,
-          message: "Gagal mengaktifkan siswa",
+          message: 'Gagal mengaktifkan siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }
@@ -422,20 +422,20 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "ID siswa tidak valid",
+            message: 'ID siswa tidak valid',
           })
           .code(400);
       }
 
       // Allowed fields to update
       const allowedFields = [
-        "NIS",
-        "NISN",
-        "username",
-        "email",
-        "Nama",
-        "Gen",
-        "NFC_id",
+        'NIS',
+        'NISN',
+        'username',
+        'email',
+        'Nama',
+        'Gen',
+        'NFC_id',
       ];
       const filteredData = {};
 
@@ -450,7 +450,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Tidak ada data yang valid untuk diupdate",
+            message: 'Tidak ada data yang valid untuk diupdate',
           })
           .code(400);
       }
@@ -460,8 +460,8 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            where: { name: "student" },
+            as: 'role',
+            where: { name: 'student' },
           },
         ],
       });
@@ -470,7 +470,7 @@ const siswaController = {
         return h
           .response({
             success: false,
-            message: "Data siswa tidak ditemukan",
+            message: 'Data siswa tidak ditemukan',
           })
           .code(404);
       }
@@ -482,37 +482,37 @@ const siswaController = {
         include: [
           {
             model: Role,
-            as: "role",
-            attributes: ["id", "name"],
+            as: 'role',
+            attributes: ['id', 'name'],
           },
         ],
         attributes: [
-          "id",
-          "NIS",
-          "NISN",
-          "username",
-          "email",
-          "Nama",
-          "Gen",
-          "NFC_id",
-          "Balance",
-          "is_active",
-          "createdAt",
-          "updatedAt",
+          'id',
+          'NIS',
+          'NISN',
+          'username',
+          'email',
+          'Nama',
+          'Gen',
+          'NFC_id',
+          'Balance',
+          'is_active',
+          'createdAt',
+          'updatedAt',
         ],
       });
 
       return h
         .response({
           success: true,
-          message: "Data siswa berhasil diupdate",
+          message: 'Data siswa berhasil diupdate',
           data: updatedSiswa,
         })
         .code(200);
     } catch (error) {
-      console.error("Error updating siswa:", error);
+      console.error('Error updating siswa:', error);
 
-      if (error.name === "SequelizeUniqueConstraintError") {
+      if (error.name === 'SequelizeUniqueConstraintError') {
         const field = error.errors[0].path;
         return h
           .response({
@@ -525,11 +525,11 @@ const siswaController = {
       return h
         .response({
           success: false,
-          message: "Gagal mengupdate data siswa",
+          message: 'Gagal mengupdate data siswa',
           error:
-            process.env.NODE_ENV === "development"
+            process.env.NODE_ENV === 'development'
               ? error.message
-              : "Internal server error",
+              : 'Internal server error',
         })
         .code(500);
     }

@@ -1,11 +1,11 @@
-const transactionController = require("../controllers/transactionController");
+const transactionController = require('../controllers/transactionController');
 
-const Joi = require("joi");
+const Joi = require('joi');
 
 const transactionRoutes = [
   {
-    method: "POST",
-    path: "/transactions/topup",
+    method: 'POST',
+    path: '/transactions/topup',
     handler: transactionController.createTopupTransaction,
     options: {
       validate: {
@@ -18,8 +18,8 @@ const transactionRoutes = [
     },
   },
   {
-    method: "POST",
-    path: "/transactions/purchase",
+    method: 'POST',
+    path: '/transactions/purchase',
     handler: transactionController.createPurchaseTransaction,
     options: {
       validate: {
@@ -40,8 +40,8 @@ const transactionRoutes = [
     },
   },
   {
-    method: "POST",
-    path: "/transactions/penalty",
+    method: 'POST',
+    path: '/transactions/penalty',
     handler: transactionController.createPenaltyTransaction,
     options: {
       validate: {
@@ -54,22 +54,22 @@ const transactionRoutes = [
     },
   },
   {
-    method: "GET",
-    path: "/transactions",
+    method: 'GET',
+    path: '/transactions',
     handler: transactionController.getAllTransactions,
     options: {
       validate: {
         query: Joi.object({
           page: Joi.number().integer().min(1).default(1),
           limit: Joi.number().integer().min(1).max(100).default(10),
-          sortBy: Joi.string().default("createdAt"),
-          sortOrder: Joi.string().valid("ASC", "DESC").default("DESC"),
+          sortBy: Joi.string().default('createdAt'),
+          sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC'),
           type: Joi.string()
-            .valid("all", "topup", "purchase", "penalty")
-            .default("all"),
+            .valid('all', 'topup', 'purchase', 'penalty')
+            .default('all'),
           status: Joi.string()
-            .valid("all", "completed", "pending")
-            .default("all"),
+            .valid('all', 'completed', 'pending')
+            .default('all'),
           startDate: Joi.date().optional(),
           endDate: Joi.date().optional(),
         }),
@@ -77,8 +77,8 @@ const transactionRoutes = [
     },
   },
   {
-    method: "GET",
-    path: "/transactions/{id}",
+    method: 'GET',
+    path: '/transactions/{id}',
     handler: transactionController.getTransactionById,
     options: {
       validate: {
@@ -88,30 +88,37 @@ const transactionRoutes = [
       },
     },
   },
+
   {
-    method: "GET",
-    path: "/transactions/siswa/{siswaId}",
+    method: 'GET',
+    path: '/transactions/siswa/{siswaId}',
     handler: transactionController.getTransactionsBySiswa,
     options: {
       validate: {
         params: Joi.object({
-          siswaId: Joi.number().integer().required(),
+          siswaId: Joi.alternatives()
+            .try(
+              Joi.number().integer(), // Untuk ID numerik
+              Joi.string().min(1).max(50) // Untuk NIS, NISN, atau NFC_id string
+            )
+            .required()
+            .description('Student ID, NIS, NISN, or NFC_id'),
         }),
         query: Joi.object({
           page: Joi.number().integer().min(1).default(1),
           limit: Joi.number().integer().min(1).max(100).default(10),
-          sortBy: Joi.string().default("createdAt"),
-          sortOrder: Joi.string().valid("ASC", "DESC").default("DESC"),
+          sortBy: Joi.string().default('createdAt'),
+          sortOrder: Joi.string().valid('ASC', 'DESC').default('DESC'),
           type: Joi.string()
-            .valid("all", "topup", "purchase", "penalty")
-            .default("all"),
+            .valid('all', 'topup', 'purchase', 'penalty')
+            .default('all'),
         }),
       },
     },
   },
   {
-    method: "GET",
-    path: "/transactions/history",
+    method: 'GET',
+    path: '/transactions/history',
     handler: transactionController.getTransactionHistory,
     options: {
       validate: {
@@ -120,8 +127,8 @@ const transactionRoutes = [
           endDate: Joi.date().required(),
           siswaId: Joi.number().integer().optional(),
           type: Joi.string()
-            .valid("all", "topup", "purchase", "penalty")
-            .default("all"),
+            .valid('all', 'topup', 'purchase', 'penalty')
+            .default('all'),
           page: Joi.number().integer().min(1).default(1),
           limit: Joi.number().integer().min(1).max(100).default(50),
         }),
@@ -129,8 +136,8 @@ const transactionRoutes = [
     },
   },
   {
-    method: "GET",
-    path: "/transactions/{id}/details",
+    method: 'GET',
+    path: '/transactions/{id}/details',
     handler: transactionController.getTransactionDetails,
     options: {
       validate: {
@@ -141,8 +148,8 @@ const transactionRoutes = [
     },
   },
   {
-    method: "DELETE",
-    path: "/transactions/{id}",
+    method: 'DELETE',
+    path: '/transactions/{id}',
     handler: transactionController.deleteTransaction,
     options: {
       validate: {

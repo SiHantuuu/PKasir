@@ -1,613 +1,907 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Camera,
+  Minus,
+  Plus,
+  ShoppingCart,
+  KeyRound,
+  CheckCircle,
+  XCircle,
+  CameraOff,
+  User,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import Image from 'next/image';
+import { toast } from 'sonner';
 
-import { useState, useEffect, useRef } from "react"
-import { Camera, Minus, Plus, ShoppingCart, CreditCard, KeyRound, CheckCircle, XCircle, CameraOff } from "lucide-react"
-import Image from "next/image"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
-// Sample product data
-const sampleProducts = [
-  {
-    id: 1,
-    name: "Snack Potato Chips",
-    price: 8000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 2,
-    name: "Chocolate Bar",
-    price: 12000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 3,
-    name: "Mineral Water",
-    price: 5000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 4,
-    name: "Sandwich",
-    price: 15000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 5,
-    name: "Fruit Juice",
-    price: 10000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 6,
-    name: "Energy Drink",
-    price: 18000,
-    image: "/placeholder.svg?height=80&width=80",
-  },
-]
-
-// Mock student data
-const mockStudents = [
-  {
-    rfid: "NFC001",
-    pin: "1234",
-    name: "Ahmad Rizky",
-    nis: "2023001",
-    balance: 250000,
-  },
-  {
-    rfid: "NFC002",
-    pin: "5678",
-    name: "Siti Nuraini",
-    nis: "2023002",
-    balance: 175000,
-  },
-  {
-    rfid: "NFC003",
-    pin: "9999",
-    name: "Budi Santoso",
-    nis: "2023003",
-    balance: 125000,
-  },
-]
+const API_BASE_URL = 'http://localhost:3001';
 
 interface Product {
-  id: number
-  name: string
-  price: number
-  image: string
-  quantity?: number
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  quantity?: number;
 }
 
 interface Student {
-  rfid: string
-  pin: string
-  name: string
-  nis: string
-  balance: number
+  id: string;
+  NISN: string;
+  PIN: string;
+  Nama: string;
+  NIS: string;
+  Balance: number;
 }
 
-type AuthFlow = "rfid-scan" | "pin-input" | "dashboard"
+type AuthFlow = 'login' | 'dashboard';
 
 interface PaymentResult {
-  success: boolean
-  message: string
-  studentName: string
-  totalAmount: number
-  newBalance?: number
-  items: Product[]
+  success: boolean;
+  message: string;
+  studentName: string;
+  totalAmount: number;
+  newBalance?: number;
+  items: Product[];
+}
+
+interface DetectionFeedback {
+  status: 'detecting' | 'detected' | 'not_detected' | 'error' | null;
+  message: string;
+  detectedCount?: number;
+  timestamp?: Date;
 }
 
 export default function Dashboard() {
-  // Authentication flow state
-  const [authFlow, setAuthFlow] = useState<AuthFlow>("rfid-scan")
-  const [scannedRfid, setScannedRfid] = useState<string>("")
-  const [authenticatedStudent, setAuthenticatedStudent] = useState<Student | null>(null)
-  const [pin, setPin] = useState("")
-  const [pinError, setPinError] = useState("")
-  const [isScanning, setIsScanning] = useState(false)
+  const [authFlow, setAuthFlow] = useState<AuthFlow>('login');
+  const [identifier, setIdentifier] = useState<string>('');
+  const [authenticatedStudent, setAuthenticatedStudent] =
+    useState<Student | null>(null);
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedProducts, setScannedProducts] = useState<Product[]>([]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(
+    null
+  );
+  const [showPaymentResult, setShowPaymentResult] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [videoReady, setVideoReady] = useState(false);
+  const [detectionFeedback, setDetectionFeedback] = useState<DetectionFeedback>(
+    {
+      status: null,
+      message: '',
+    }
+  );
 
-  // Dashboard state
-  const [scannedProducts, setScannedProducts] = useState<Product[]>([])
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-
-  // Payment result state
-  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null)
-  const [showPaymentResult, setShowPaymentResult] = useState(false)
-
-  // Camera state
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isCameraActive, setIsCameraActive] = useState(false)
-  const [cameraError, setCameraError] = useState<string>("")
-
-  // Calculate total price
   const totalPrice = scannedProducts.reduce((total, product) => {
-    return total + product.price * (product.quantity || 1)
-  }, 0)
+    return total + product.price * (product.quantity || 1);
+  }, 0);
 
-  // Auto-close payment result popup after 2 seconds
   useEffect(() => {
     if (showPaymentResult && paymentResult) {
       const timer = setTimeout(() => {
-        setShowPaymentResult(false)
-        setPaymentResult(null)
-
-        // If payment was successful, reset everything and go back to RFID scan
+        setShowPaymentResult(false);
+        setPaymentResult(null);
         if (paymentResult.success) {
-          resetToRfidScan()
+          resetToLogin();
         }
-      }, 2000)
-
-      return () => clearTimeout(timer)
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [showPaymentResult, paymentResult])
+  }, [showPaymentResult, paymentResult]);
 
-  // Camera functions
+  // Clear detection feedback after 5 seconds
+  useEffect(() => {
+    if (detectionFeedback.status && detectionFeedback.status !== 'detecting') {
+      const timer = setTimeout(() => {
+        setDetectionFeedback({ status: null, message: '' });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [detectionFeedback]);
+
   const startCamera = async () => {
     try {
-      setCameraError("")
+      setCameraError('');
+      setIsLoading(true);
+      const loadingToast = toast.loading('Starting camera...');
+
+      // Check if video element exists
+      if (!videoRef.current) {
+        throw new Error('Video element not found');
+      }
+
+      // Stop existing stream if any
+      if (videoRef.current.srcObject) {
+        stopCamera();
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment", // Use back camera if available
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
-      })
+      });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setIsCameraActive(true)
+      videoRef.current.srcObject = stream;
 
-        // Setup canvas to match video dimensions
-        if (canvasRef.current) {
-          canvasRef.current.width = videoRef.current.videoWidth
-          canvasRef.current.height = videoRef.current.videoHeight
+      // Wait for video to be ready
+      await new Promise<void>((resolve, reject) => {
+        const video = videoRef.current;
+        if (!video) {
+          reject(new Error('Video element lost'));
+          return;
         }
-      }
+
+        const onLoadedMetadata = () => {
+          if (canvasRef.current && video) {
+            canvasRef.current.width = video.videoWidth;
+            canvasRef.current.height = video.videoHeight;
+          }
+          setVideoReady(true);
+          resolve();
+        };
+
+        const onError = () => {
+          reject(new Error('Video loading failed'));
+        };
+
+        video.addEventListener('loadedmetadata', onLoadedMetadata, {
+          once: true,
+        });
+        video.addEventListener('error', onError, { once: true });
+
+        // Cleanup listeners on timeout
+        setTimeout(() => {
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onError);
+          reject(new Error('Camera timeout'));
+        }, 10000);
+      });
+
+      setIsCameraActive(true);
+      setIsLoading(false);
+      toast.dismiss(loadingToast);
+      toast.success('Camera started successfully');
     } catch (error) {
-      console.error("Error accessing camera:", error)
-      setCameraError("Unable to access camera. Please check permissions.")
-      setIsCameraActive(false)
+      console.error('Error accessing camera:', error);
+      setCameraError('Unable to access camera. Please check permissions.');
+      setIsCameraActive(false);
+      setVideoReady(false);
+      setIsLoading(false);
+
+      let errorMessage = 'Unable to access camera';
+      if (error instanceof Error) errorMessage = error.message;
+
+      toast.error('Camera Error', { description: errorMessage });
+
+      if (videoRef.current?.srcObject) {
+        stopCamera();
+      }
     }
-  }
+  };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      const tracks = stream.getTracks()
-      tracks.forEach((track) => track.stop())
-      videoRef.current.srcObject = null
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
     }
-    setIsCameraActive(false)
-  }
+    setIsCameraActive(false);
+    setVideoReady(false);
+    toast.info('Camera stopped');
+  };
 
-  // Capture a frame from the camera
-  const captureFrame = () => {
-    if (videoRef.current && canvasRef.current && isCameraActive) {
-      const context = canvasRef.current.getContext("2d")
-      if (context) {
-        // Draw the current video frame to the canvas
-        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height)
+  const apiRequest = async (url: string, options: RequestInit = {}) => {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
 
-        // You could return the data URL if needed
-        // return canvasRef.current.toDataURL('image/jpeg')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
     }
-  }
+  };
 
-  // Start camera when entering dashboard
-  useEffect(() => {
-    if (authFlow === "dashboard") {
-      startCamera()
-    } else {
-      stopCamera()
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinError('');
+    setIsLoading(true);
+    const loadingToast = toast.loading('Authenticating...');
+
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/auth/login/siswa`, {
+        method: 'POST',
+        body: JSON.stringify({ identifier, PIN: pin }),
+      });
+
+      if (response.success) {
+        setAuthenticatedStudent(response.data.user);
+        setAuthFlow('dashboard');
+        setPin('');
+        setIdentifier('');
+        toast.dismiss(loadingToast);
+        toast.success(`Welcome, ${response.data.user.Nama}!`);
+      } else {
+        setPinError(response.message || 'Invalid credentials');
+        setPin('');
+        toast.dismiss(loadingToast);
+        toast.error(response.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setPinError('Login failed. Please try again.');
+      setPin('');
+      toast.dismiss(loadingToast);
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const captureFrame = async () => {
+    if (
+      !videoRef.current ||
+      !canvasRef.current ||
+      !isCameraActive ||
+      !videoReady
+    ) {
+      toast.error('Camera not ready');
+      return;
     }
 
-    // Cleanup on unmount
-    return () => {
-      stopCamera()
+    try {
+      setIsLoading(true);
+      setDetectionFeedback({
+        status: 'detecting',
+        message: 'Analyzing image...',
+        timestamp: new Date(),
+      });
+
+      const loadingToast = toast.loading('Processing image...');
+
+      if (videoRef.current.paused || videoRef.current.ended) {
+        throw new Error('Video stream not active');
+      }
+
+      const context = canvasRef.current.getContext('2d');
+      if (!context) throw new Error('Could not get canvas context');
+
+      context.drawImage(
+        videoRef.current,
+        0,
+        0,
+        canvasRef.current.width,
+        canvasRef.current.height
+      );
+
+      const blob = await new Promise<Blob>((resolve) => {
+        canvasRef.current?.toBlob(
+          (blob) => blob && resolve(blob),
+          'image/jpeg',
+          0.95
+        );
+      });
+
+      const formData = new FormData();
+      formData.append('image', blob, 'capture.jpg');
+
+      const response = await fetch(`${API_BASE_URL}/predict/image`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
+      const result = await response.json();
+
+      if (result.success && result.data.products) {
+        const detectedProducts = result.data.products; // Expected format: {"Pocky": 2, "Pringles": 1}
+        const productNames = Object.keys(detectedProducts);
+
+        if (productNames.length > 0) {
+          setDetectionFeedback({
+            status: 'detected',
+            message: `${productNames.length} product(s) detected successfully!`,
+            detectedCount: productNames.length,
+            timestamp: new Date(),
+          });
+
+          // Use the new batch API endpoint
+          try {
+            const batchResponse = await apiRequest(
+              `${API_BASE_URL}/products/batch`,
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  products: detectedProducts, // {"Pocky": 2, "Pringles": 1}
+                }),
+              }
+            );
+
+            if (batchResponse.success) {
+              const { found, notFound, summary } = batchResponse.data;
+
+              // Convert found products to our Product interface
+              const foundProducts: Product[] = Object.entries(found).map(
+                ([productName, productData]: [string, any]) => ({
+                  id: productData.id,
+                  name: productData.Nama,
+                  price: productData.Harga,
+                  image: '/placeholder.svg?height=80&width=80',
+                  quantity: productData.requestedQuantity,
+                })
+              );
+
+              if (foundProducts.length > 0) {
+                // Add products to cart
+                setScannedProducts((prev) => {
+                  const updatedProducts = [...prev];
+                  foundProducts.forEach((newProduct) => {
+                    const existingIndex = updatedProducts.findIndex(
+                      (p) => p.id === newProduct.id
+                    );
+                    if (existingIndex >= 0) {
+                      updatedProducts[existingIndex].quantity =
+                        (updatedProducts[existingIndex].quantity || 1) +
+                        (newProduct.quantity || 1);
+                    } else {
+                      updatedProducts.push(newProduct);
+                    }
+                  });
+                  return updatedProducts;
+                });
+
+                toast.dismiss(loadingToast);
+
+                // Show success message with details
+                const successMessage = `Added ${foundProducts.length} product(s) to cart`;
+                const productDetails = foundProducts
+                  .map((p) => `${p.name} (${p.quantity}x)`)
+                  .join(', ');
+
+                toast.success(successMessage, {
+                  description: productDetails,
+                });
+
+                // Show warning for products not found
+                if (notFound.length > 0) {
+                  toast.warning(`${notFound.length} product(s) not found`, {
+                    description: `Could not find: ${notFound.join(', ')}`,
+                  });
+                }
+              } else {
+                setDetectionFeedback({
+                  status: 'not_detected',
+                  message: 'Detected products not found in database',
+                  timestamp: new Date(),
+                });
+                toast.dismiss(loadingToast);
+                toast.warning('Products not found', {
+                  description: `Detected: ${productNames.join(
+                    ', '
+                  )} but not found in database`,
+                });
+              }
+            } else {
+              throw new Error(batchResponse.message || 'Batch API failed');
+            }
+          } catch (batchError) {
+            console.error('Batch API error:', batchError);
+            setDetectionFeedback({
+              status: 'error',
+              message: 'Failed to fetch product details from database',
+              timestamp: new Date(),
+            });
+            toast.dismiss(loadingToast);
+            toast.error('Database error', {
+              description: 'Could not fetch product details',
+            });
+          }
+        } else {
+          setDetectionFeedback({
+            status: 'not_detected',
+            message: 'No products detected in the image',
+            timestamp: new Date(),
+          });
+          toast.dismiss(loadingToast);
+          toast.info('No products detected', {
+            description: 'Try adjusting the camera angle or lighting',
+          });
+        }
+      } else {
+        setDetectionFeedback({
+          status: 'not_detected',
+          message: result.message || 'No products detected in the image',
+          timestamp: new Date(),
+        });
+        toast.dismiss(loadingToast);
+        toast.warning('Detection failed', {
+          description:
+            result.message || 'Please try again with better lighting',
+        });
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      setDetectionFeedback({
+        status: 'error',
+        message: 'Failed to process image. Please try again.',
+        timestamp: new Date(),
+      });
+      toast.dismiss(loadingToast);
+      toast.error('Processing failed', {
+        description: 'Check your connection or try again',
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [authFlow])
+  };
 
-  // RFID Scan handlers
-  const handleRfidScan = () => {
-    setIsScanning(true)
-
-    // Simulate RFID scanning delay
-    setTimeout(() => {
-      // Simulate random RFID scan (in real app, this would come from RFID reader)
-      const randomStudent = mockStudents[Math.floor(Math.random() * mockStudents.length)]
-      setScannedRfid(randomStudent.rfid)
-      setIsScanning(false)
-      setAuthFlow("pin-input")
-    }, 2000)
-  }
-
-  const handleManualRfidInput = (rfid: string) => {
-    const student = mockStudents.find((s) => s.rfid === rfid)
-    if (student) {
-      setScannedRfid(rfid)
-      setAuthFlow("pin-input")
-    } else {
-      // Show error popup instead of browser alert
-      setPaymentResult({
-        success: false,
-        message: "RFID tidak ditemukan dalam sistem!",
-        studentName: "",
-        totalAmount: 0,
-        items: [],
-      })
-      setShowPaymentResult(true)
-    }
-  }
-
-  // PIN verification handlers
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPinError("")
-
-    const student = mockStudents.find((s) => s.rfid === scannedRfid && s.pin === pin)
-
-    if (student) {
-      setAuthenticatedStudent(student)
-      setAuthFlow("dashboard")
-      setPin("")
-    } else {
-      setPinError("PIN salah! Silakan coba lagi.")
-      setPin("")
-    }
-  }
-
-  // Dashboard handlers
   const addProduct = (product: Product) => {
     setScannedProducts((prev) => {
-      const existingProductIndex = prev.findIndex((p) => p.id === product.id)
-
-      if (existingProductIndex >= 0) {
-        const updatedProducts = [...prev]
-        const existingProduct = updatedProducts[existingProductIndex]
-        updatedProducts[existingProductIndex] = {
-          ...existingProduct,
-          quantity: (existingProduct.quantity || 1) + 1,
-        }
-        return updatedProducts
-      } else {
-        return [...prev, { ...product, quantity: 1 }]
+      const existingIndex = prev.findIndex((p) => p.id === product.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity =
+          (updated[existingIndex].quantity || 1) + 1;
+        return updated;
       }
-    })
-
-    setIsProductModalOpen(false)
-  }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    setIsProductModalOpen(false);
+    toast.success(`${product.name} added to cart`);
+  };
 
   const removeProduct = (productId: number) => {
-    setScannedProducts((prev) => prev.filter((p) => p.id !== productId))
-  }
+    const product = scannedProducts.find((p) => p.id === productId);
+    setScannedProducts((prev) => prev.filter((p) => p.id !== productId));
+    if (product) toast.info(`${product.name} removed`);
+  };
 
   const increaseQuantity = (productId: number) => {
     setScannedProducts((prev) =>
-      prev.map((product) => {
-        if (product.id === productId) {
-          return {
-            ...product,
-            quantity: (product.quantity || 1) + 1,
-          }
-        }
-        return product
-      }),
-    )
-  }
+      prev.map((product) =>
+        product.id === productId
+          ? { ...product, quantity: (product.quantity || 1) + 1 }
+          : product
+      )
+    );
+  };
 
   const decreaseQuantity = (productId: number) => {
     setScannedProducts((prev) =>
-      prev.map((product) => {
-        if (product.id === productId) {
-          const newQuantity = (product.quantity || 1) - 1
-          if (newQuantity <= 0) {
-            return product
-          }
-          return {
-            ...product,
-            quantity: newQuantity,
-          }
-        }
-        return product
-      }),
-    )
-  }
+      prev.map((product) =>
+        product.id === productId && (product.quantity || 1) > 1
+          ? { ...product, quantity: (product.quantity || 1) - 1 }
+          : product
+      )
+    );
+  };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (scannedProducts.length === 0) {
-      setPaymentResult({
-        success: false,
-        message: "Tidak ada produk untuk dibayar!",
-        studentName: authenticatedStudent?.name || "",
-        totalAmount: 0,
-        items: [],
-      })
-      setShowPaymentResult(true)
-      return
+      toast.error('No products to pay for');
+      return;
     }
 
-    if (authenticatedStudent && totalPrice > authenticatedStudent.balance) {
-      setPaymentResult({
-        success: false,
-        message: `Saldo tidak mencukupi! Saldo Anda: Rp ${authenticatedStudent.balance.toLocaleString()}, Total belanja: Rp ${totalPrice.toLocaleString()}`,
-        studentName: authenticatedStudent.name,
-        totalAmount: totalPrice,
-        items: [...scannedProducts],
-      })
-      setShowPaymentResult(true)
-      return
+    if (authenticatedStudent && totalPrice > authenticatedStudent.Balance) {
+      toast.error(
+        `Insufficient balance (Rp ${authenticatedStudent.Balance.toLocaleString()})`
+      );
+      return;
     }
 
-    // Payment successful
-    if (authenticatedStudent) {
-      const newBalance = authenticatedStudent.balance - totalPrice
+    try {
+      setIsLoading(true);
+      const loadingToast = toast.loading('Processing payment...');
 
-      setPaymentResult({
-        success: true,
-        message: "Pembayaran berhasil diproses!",
-        studentName: authenticatedStudent.name,
-        totalAmount: totalPrice,
-        newBalance: newBalance,
-        items: [...scannedProducts],
-      })
+      const response = await apiRequest(
+        `${API_BASE_URL}/transactions/purchase`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            customer_id: authenticatedStudent?.id,
+            items: scannedProducts.map((p) => ({
+              product_id: p.id,
+              amount: p.quantity || 1,
+            })),
+            note: 'Purchase from dashboard',
+          }),
+        }
+      );
 
-      // Update student balance (in real app, this would be sent to backend)
-      setAuthenticatedStudent({
-        ...authenticatedStudent,
-        balance: newBalance,
-      })
+      if (response.success) {
+        const transaction = response.data;
+        setPaymentResult({
+          success: true,
+          message: 'Payment successful!',
+          studentName: authenticatedStudent?.Nama || '',
+          totalAmount: transaction.total_amount,
+          newBalance: transaction.new_balance,
+          items: [...scannedProducts],
+        });
 
-      setShowPaymentResult(true)
+        if (authenticatedStudent) {
+          setAuthenticatedStudent({
+            ...authenticatedStudent,
+            Balance: transaction.new_balance,
+          });
+        }
+
+        setShowPaymentResult(true);
+        toast.dismiss(loadingToast);
+        toast.success('Payment processed', {
+          description: `New balance: Rp ${transaction.new_balance.toLocaleString()}`,
+        });
+      } else {
+        toast.dismiss(loadingToast);
+        toast.error(response.message || 'Payment failed');
+      }
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Payment error');
+      console.error('Payment error:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  const resetToRfidScan = () => {
-    setAuthFlow("rfid-scan")
-    setScannedRfid("")
-    setAuthenticatedStudent(null)
-    setPin("")
-    setPinError("")
-    setScannedProducts([])
-  }
+  const resetToLogin = () => {
+    stopCamera();
+    setAuthFlow('login');
+    setIdentifier('');
+    setAuthenticatedStudent(null);
+    setPin('');
+    setPinError('');
+    setScannedProducts([]);
+    setDetectionFeedback({ status: null, message: '' });
+  };
 
   const handleLogout = () => {
-    resetToRfidScan()
-  }
+    resetToLogin();
+    toast.info('Logged out successfully');
+  };
 
-  // RFID Scan Page
-  const renderRfidScanPage = () => (
+  // Effect to handle camera initialization after dashboard is rendered
+  useEffect(() => {
+    if (authFlow === 'dashboard') {
+      // Wait for DOM to be fully rendered
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          startCamera();
+        }
+      }, 500); // Increased delay to ensure DOM is ready
+
+      return () => clearTimeout(timer);
+    }
+  }, [authFlow]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (isProductModalOpen) {
+        try {
+          const loadingToast = toast.loading('Loading products...');
+          const response = await apiRequest(`${API_BASE_URL}/products`);
+
+          if (response.success) {
+            setProducts(
+              response.data.products.map((p: any) => ({
+                id: p.id,
+                name: p.Nama,
+                price: p.Harga,
+                image: '/placeholder.svg?height=80&width=80',
+              }))
+            );
+            toast.dismiss(loadingToast);
+            toast.success(`${response.data.products.length} products loaded`);
+          } else {
+            toast.dismiss(loadingToast);
+            toast.error('Failed to load products');
+          }
+        } catch (error) {
+          toast.error('Network error');
+          console.error('Error fetching products:', error);
+        }
+      }
+    };
+
+    fetchProducts();
+  }, [isProductModalOpen]);
+
+  useEffect(() => {
+    // Check camera availability
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const cameras = devices.filter((device) => device.kind === 'videoinput');
+      if (cameras.length === 0) {
+        toast.error('No camera detected!');
+      } else {
+        console.log('Available cameras:', cameras);
+      }
+    });
+  }, []);
+
+  const getDetectionStatusBadge = () => {
+    if (!detectionFeedback.status) return null;
+
+    const badgeProps = {
+      detecting: {
+        variant: 'secondary' as const,
+        icon: Eye,
+        className: 'animate-pulse',
+      },
+      detected: {
+        variant: 'default' as const,
+        icon: CheckCircle,
+        className: 'bg-green-500 hover:bg-green-600',
+      },
+      not_detected: {
+        variant: 'outline' as const,
+        icon: EyeOff,
+        className: 'border-orange-500 text-orange-700',
+      },
+      error: {
+        variant: 'destructive' as const,
+        icon: AlertTriangle,
+        className: '',
+      },
+    };
+
+    const config = badgeProps[detectionFeedback.status];
+    const IconComponent = config.icon;
+
+    return (
+      <Badge
+        variant={config.variant}
+        className={`flex items-center gap-1 ${config.className}`}
+      >
+        <IconComponent className="h-3 w-3" />
+        {detectionFeedback.status === 'detected' &&
+        detectionFeedback.detectedCount
+          ? `${detectionFeedback.detectedCount} detected`
+          : detectionFeedback.status.replace('_', ' ')}
+      </Badge>
+    );
+  };
+
+  const renderLoginPage = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl flex items-center justify-center gap-2">
-            <CreditCard className="h-6 w-6 text-blue-500" />
-            Scan Kartu RFID
+            <User className="h-6 w-6 text-blue-500" />
+            Student Login
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* RFID Scanner Area */}
-          <div className="relative bg-slate-900 rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px]">
-            {isScanning ? (
-              <div className="text-white text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
-                <p className="text-lg">Scanning...</p>
-                <p className="text-sm opacity-70 mt-2">Tempelkan kartu RFID</p>
-              </div>
-            ) : (
-              <div className="text-white text-center">
-                <CreditCard className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg opacity-70">Siap untuk scan</p>
-                <p className="text-sm opacity-50 mt-2">Tempelkan kartu RFID Anda</p>
-              </div>
-            )}
-          </div>
-
-          <Button className="w-full" onClick={handleRfidScan} disabled={isScanning}>
-            {isScanning ? "Scanning..." : "Mulai Scan RFID"}
-          </Button>
-
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-2">Atau masukkan ID manual untuk testing:</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleManualRfidInput("NFC001")}>
-                NFC001
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleManualRfidInput("NFC002")}>
-                NFC002
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => handleManualRfidInput("NFC003")}>
-                NFC003
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-
-  // PIN Input Page
-  const renderPinInputPage = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl flex items-center justify-center gap-2">
-            <KeyRound className="h-6 w-6 text-green-500" />
-            Masukkan PIN
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-sm text-muted-foreground">Kartu RFID berhasil discan</span>
-            </div>
-            <p className="text-sm text-muted-foreground">ID: {scannedRfid}</p>
-          </div>
-
-          <form onSubmit={handlePinSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="pin">PIN (4 digit)</Label>
+              <Label htmlFor="identifier">NISN/NIS/Username/NFC ID</Label>
+              <Input
+                id="identifier"
+                type="text"
+                placeholder="Enter your identifier"
+                className="text-center text-lg"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                autoFocus
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pin">PIN (6 digit)</Label>
               <div className="relative">
                 <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="pin"
                   type="password"
-                  placeholder="Masukkan PIN Anda"
+                  placeholder="Enter your PIN"
                   className="pl-10 text-center text-lg tracking-widest"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  maxLength={4}
-                  autoFocus
+                  maxLength={6}
+                  disabled={isLoading}
                 />
               </div>
               {pinError && <p className="text-sm text-red-500">{pinError}</p>}
             </div>
 
-            <Button type="submit" className="w-full" disabled={pin.length !== 4}>
-              Verifikasi PIN
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!identifier || pin.length !== 6 || isLoading}
+            >
+              {isLoading ? 'Verifying...' : 'Login'}
             </Button>
           </form>
-
-          <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" onClick={() => setAuthFlow("rfid-scan")}>
-              Kembali ke Scan RFID
-            </Button>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-xs text-muted-foreground">Testing PIN:</p>
-            <p className="text-xs text-muted-foreground">NFC001: 1234, NFC002: 5678, NFC003: 9999</p>
-          </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 
-  // Dashboard Page with working camera
   const renderDashboard = () => (
     <div className="flex-1 flex flex-col w-full max-w-full overflow-hidden">
-      {/* Header */}
       <header className="border-b bg-white shadow-sm">
         <div className="flex h-16 items-center px-8 justify-between">
-          <h1 className="text-2xl font-semibold">Dashboard Payment</h1>
+          <h1 className="text-2xl font-semibold">Payment Dashboard</h1>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium">{authenticatedStudent?.name}</p>
-              <p className="text-xs text-muted-foreground">NIS: {authenticatedStudent?.nis}</p>
+              <p className="text-sm font-medium">
+                {authenticatedStudent?.Nama}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                NIS: {authenticatedStudent?.NIS}
+              </p>
             </div>
-            <Button variant="outline" onClick={handleLogout}>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              disabled={isLoading}
+            >
               Logout
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main content - split into two equal columns */}
       <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-2 h-full">
           {/* Left section - Camera */}
           <div className="p-6 border-r">
             <Card className="w-full h-full flex flex-col">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  {isCameraActive ? (
-                    <Camera className="h-6 w-6 text-green-500" />
-                  ) : (
-                    <CameraOff className="h-6 w-6 text-red-500" />
-                  )}
-                  Camera
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    {isCameraActive ? (
+                      <Camera className="h-6 w-6 text-green-500" />
+                    ) : (
+                      <CameraOff className="h-6 w-6 text-red-500" />
+                    )}
+                    Camera
+                  </CardTitle>
+                  {getDetectionStatusBadge()}
+                </div>
+                {detectionFeedback.message && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {detectionFeedback.message}
+                    {detectionFeedback.timestamp && (
+                      <span className="ml-2 text-xs">
+                        ({detectionFeedback.timestamp.toLocaleTimeString()})
+                      </span>
+                    )}
+                  </p>
+                )}
               </CardHeader>
               <CardContent className="flex-1 flex flex-col pt-2">
-                {/* Camera area */}
                 <div className="relative flex-1 bg-slate-900 rounded-md overflow-hidden mb-6">
-                  {isCameraActive ? (
-                    <>
-                      <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                      <canvas
-                        ref={canvasRef}
-                        className="absolute inset-0 w-full h-full pointer-events-none"
-                        style={{ display: "none" }} // Hidden by default, can be used for AI processing
-                      />
-                      {/* Status indicator */}
-                      <div className="absolute top-4 left-4">
-                        <div className="flex items-center gap-2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          Camera Active
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white">
+                  {/* Video element is always rendered */}
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{
+                      display: isCameraActive && videoReady ? 'block' : 'none',
+                    }}
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ display: 'none' }}
+                  />
+
+                  {/* Overlay for non-active states */}
+                  {(!isCameraActive || !videoReady) && (
+                    <div className="absolute inset-0 w-full h-full flex items-center justify-center text-white">
                       {cameraError ? (
                         <div className="text-center p-8">
                           <CameraOff className="h-16 w-16 mx-auto mb-4 text-red-400" />
-                          <p className="text-lg text-red-400 mb-2">Camera Error</p>
+                          <p className="text-lg text-red-400 mb-2">
+                            Camera Error
+                          </p>
                           <p className="text-sm opacity-70">{cameraError}</p>
-                          <Button variant="outline" size="sm" className="mt-4" onClick={startCamera}>
-                            Retry Camera
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={startCamera}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? 'Starting...' : 'Retry Camera'}
                           </Button>
                         </div>
                       ) : (
                         <div className="text-center p-8">
-                          <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                          <p className="text-lg opacity-70">Starting camera...</p>
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent mx-auto mb-4"></div>
+                          <p className="text-lg opacity-70">
+                            {isLoading ? 'Starting camera...' : 'Camera ready'}
+                          </p>
                         </div>
                       )}
                     </div>
                   )}
+
+                  {/* Detection overlay animation */}
+                  {detectionFeedback.status === 'detecting' && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute inset-4 border-2 border-blue-400 rounded-lg animate-pulse">
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
+                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
+                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Camera controls */}
                 <div className="flex gap-2">
                   <Button
                     className="flex-1"
-                    variant={isCameraActive ? "destructive" : "default"}
-                    onClick={isCameraActive ? stopCamera : startCamera}
+                    variant="default"
+                    onClick={captureFrame}
+                    disabled={!isCameraActive || !videoReady || isLoading}
                   >
-                    {isCameraActive ? (
-                      <>
-                        <CameraOff className="mr-2 h-4 w-4" />
-                        Stop Camera
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="mr-2 h-4 w-4" />
-                        Start Camera
-                      </>
-                    )}
+                    <Camera className="mr-2 h-4 w-4" />
+                    {detectionFeedback.status === 'detecting'
+                      ? 'Analyzing...'
+                      : isLoading
+                      ? 'Processing...'
+                      : 'Capture Frame'}
                   </Button>
-                  <Button variant="outline" onClick={() => setIsProductModalOpen(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsProductModalOpen(true)}
+                    disabled={isLoading}
+                  >
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     Select Product
                   </Button>
-                </div>
-
-                {/* Instructions */}
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  <p>Camera feed ready for AI processing</p>
-                  <p className="text-xs mt-1">Use the camera to capture product images</p>
                 </div>
               </CardContent>
             </Card>
@@ -627,26 +921,31 @@ export default function Dashboard() {
                   <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
                     <ShoppingCart className="h-32 w-32 mb-6 opacity-30" />
                     <p className="text-xl">No products scanned yet</p>
-                    <p className="text-sm mt-2">Add products manually</p>
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto">
                     <div className="space-y-4">
                       {scannedProducts.map((product) => (
-                        <div key={product.id} className="flex items-center gap-4 p-4 border rounded-md">
+                        <div
+                          key={product.id}
+                          className="flex items-center gap-4 p-4 border rounded-md"
+                        >
                           <Image
-                            src={product.image || "/placeholder.svg"}
+                            src={product.image || '/placeholder.svg'}
                             alt={product.name}
                             width={70}
                             height={70}
                             className="rounded-md object-cover"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-lg truncate">{product.name}</p>
-                            <p className="text-muted-foreground">Rp {product.price.toLocaleString()}</p>
+                            <p className="font-medium text-lg truncate">
+                              {product.name}
+                            </p>
+                            <p className="text-muted-foreground">
+                              Rp {product.price.toLocaleString()}
+                            </p>
                           </div>
 
-                          {/* Quantity controls */}
                           <div className="flex items-center gap-2 mr-2">
                             <Button
                               variant="outline"
@@ -657,7 +956,9 @@ export default function Dashboard() {
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="w-8 text-center font-medium">{product.quantity || 1}</span>
+                            <span className="w-8 text-center font-medium">
+                              {product.quantity || 1}
+                            </span>
                             <Button
                               variant="outline"
                               size="icon"
@@ -670,7 +971,10 @@ export default function Dashboard() {
 
                           <div className="text-right">
                             <p className="font-medium text-lg">
-                              Rp {(product.price * (product.quantity || 1)).toLocaleString()}
+                              Rp{' '}
+                              {(
+                                product.price * (product.quantity || 1)
+                              ).toLocaleString()}
                             </p>
                             <Button
                               variant="ghost"
@@ -697,43 +1001,51 @@ export default function Dashboard() {
         <Card className="w-full rounded-none border-0">
           <CardContent className="py-3 px-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* User Info */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Student:</span>
-                  <span className="font-medium">{authenticatedStudent?.name}</span>
+                  <span className="font-medium">
+                    {authenticatedStudent?.Nama}
+                  </span>
                 </div>
-
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Balance:</span>
-                  <span className="font-medium">Rp {authenticatedStudent?.balance.toLocaleString()}</span>
+                  <span className="font-medium">
+                    Rp {authenticatedStudent?.Balance.toLocaleString()}
+                  </span>
                 </div>
               </div>
 
-              {/* Order Info */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Items:</span>
                   <span className="font-medium">{scannedProducts.length}</span>
                 </div>
-
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Quantity:</span>
                   <span className="font-medium">
-                    {scannedProducts.reduce((total, item) => total + (item.quantity || 1), 0)}
+                    {scannedProducts.reduce(
+                      (total, item) => total + (item.quantity || 1),
+                      0
+                    )}
                   </span>
                 </div>
               </div>
 
-              {/* Price and Payment */}
               <div className="flex items-center justify-between">
                 <div className="font-medium">
                   <span className="text-lg mr-2">Total Price:</span>
-                  <span className="text-2xl font-bold">Rp {totalPrice.toLocaleString()}</span>
+                  <span className="text-2xl font-bold">
+                    Rp {totalPrice.toLocaleString()}
+                  </span>
                 </div>
-
-                <Button size="lg" disabled={scannedProducts.length === 0} onClick={handlePayment} className="px-6 py-2">
-                  Pay Now
+                <Button
+                  size="lg"
+                  disabled={scannedProducts.length === 0 || isLoading}
+                  onClick={handlePayment}
+                  className="px-6 py-2"
+                >
+                  {isLoading ? 'Processing...' : 'Pay Now'}
                 </Button>
               </div>
             </div>
@@ -747,8 +1059,11 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="text-xl">Select Product</DialogTitle>
           </DialogHeader>
-
-          <Tabs defaultValue="grid" className="w-full" onValueChange={(value) => setViewMode(value as "grid" | "list")}>
+          <Tabs
+            defaultValue="grid"
+            className="w-full"
+            onValueChange={(value) => setViewMode(value as 'grid' | 'list')}
+          >
             <div className="flex justify-between items-center mb-4">
               <TabsList>
                 <TabsTrigger value="grid">Grid View</TabsTrigger>
@@ -758,7 +1073,7 @@ export default function Dashboard() {
 
             <TabsContent value="grid" className="mt-0">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {sampleProducts.map((product) => (
+                {products.map((product) => (
                   <div
                     key={product.id}
                     className="border rounded-lg p-6 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -766,15 +1081,19 @@ export default function Dashboard() {
                   >
                     <div className="flex justify-center mb-4">
                       <Image
-                        src={product.image || "/placeholder.svg"}
+                        src={product.image || '/placeholder.svg'}
                         alt={product.name}
                         width={100}
                         height={100}
                         className="rounded-md object-cover"
                       />
                     </div>
-                    <h3 className="font-medium text-center text-lg">{product.name}</h3>
-                    <p className="text-center text-muted-foreground mt-1">Rp {product.price.toLocaleString()}</p>
+                    <h3 className="font-medium text-center text-lg">
+                      {product.name}
+                    </h3>
+                    <p className="text-center text-muted-foreground mt-1">
+                      Rp {product.price.toLocaleString()}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -782,14 +1101,14 @@ export default function Dashboard() {
 
             <TabsContent value="list" className="mt-0">
               <div className="space-y-3">
-                {sampleProducts.map((product) => (
+                {products.map((product) => (
                   <div
                     key={product.id}
                     className="flex items-center gap-6 border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => addProduct(product)}
                   >
                     <Image
-                      src={product.image || "/placeholder.svg"}
+                      src={product.image || '/placeholder.svg'}
                       alt={product.name}
                       width={80}
                       height={80}
@@ -798,7 +1117,9 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <h3 className="font-medium text-lg">{product.name}</h3>
                     </div>
-                    <p className="font-medium text-lg">Rp {product.price.toLocaleString()}</p>
+                    <p className="font-medium text-lg">
+                      Rp {product.price.toLocaleString()}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -807,18 +1128,15 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full bg-background">
         <AppSidebar />
+        {authFlow === 'login' ? renderLoginPage() : renderDashboard()}
 
-        {authFlow === "rfid-scan" && renderRfidScanPage()}
-        {authFlow === "pin-input" && renderPinInputPage()}
-        {authFlow === "dashboard" && renderDashboard()}
-
-        {/* Payment Result Dialog - Auto close after 2 seconds */}
+        {/* Payment Result Dialog */}
         <AlertDialog open={showPaymentResult} onOpenChange={() => {}}>
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>
@@ -828,56 +1146,36 @@ export default function Dashboard() {
                 ) : (
                   <XCircle className="h-8 w-8 text-red-600" />
                 )}
-                <AlertDialogTitle className={paymentResult?.success ? "text-green-800" : "text-red-800"}>
-                  {paymentResult?.success ? "Payment Successful!" : "Payment Failed"}
+                <AlertDialogTitle
+                  className={
+                    paymentResult?.success ? 'text-green-800' : 'text-red-800'
+                  }
+                >
+                  {paymentResult?.success ? 'Success!' : 'Failed'}
                 </AlertDialogTitle>
               </div>
               <AlertDialogDescription className="text-left space-y-3">
                 <div className="text-gray-700">
                   <p className="font-medium">{paymentResult?.message}</p>
-
                   {paymentResult?.studentName && (
                     <div className="mt-3 space-y-1">
                       <p>
-                        <span className="font-medium">Student:</span> {paymentResult.studentName}
+                        <span className="font-medium">Student:</span>{' '}
+                        {paymentResult.studentName}
                       </p>
                       <p>
-                        <span className="font-medium">Total Amount:</span> Rp{" "}
+                        <span className="font-medium">Total:</span> Rp{' '}
                         {paymentResult.totalAmount.toLocaleString()}
                       </p>
-                      {paymentResult.success && paymentResult.newBalance !== undefined && (
-                        <p>
-                          <span className="font-medium">New Balance:</span> Rp{" "}
-                          {paymentResult.newBalance.toLocaleString()}
-                        </p>
-                      )}
+                      {paymentResult.success &&
+                        paymentResult.newBalance !== undefined && (
+                          <p>
+                            <span className="font-medium">New Balance:</span> Rp{' '}
+                            {paymentResult.newBalance.toLocaleString()}
+                          </p>
+                        )}
                     </div>
                   )}
-
-                  {paymentResult?.items && paymentResult.items.length > 0 && (
-                    <div className="mt-3">
-                      <p className="font-medium mb-2">Items purchased:</p>
-                      <div className="space-y-1 text-sm">
-                        {paymentResult.items.map((item) => (
-                          <div key={item.id} className="flex justify-between">
-                            <span>
-                              {item.name} x{item.quantity || 1}
-                            </span>
-                            <span>Rp {(item.price * (item.quantity || 1)).toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Auto-close indicator */}
-                  <div className="mt-4 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      {paymentResult?.success
-                        ? "Returning to RFID scan in 2 seconds..."
-                        : "This dialog will close automatically in 2 seconds..."}
-                    </p>
-                  </div>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -885,5 +1183,5 @@ export default function Dashboard() {
         </AlertDialog>
       </div>
     </SidebarProvider>
-  )
+  );
 }
