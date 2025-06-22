@@ -3,11 +3,7 @@ const Hapi = require('@hapi/hapi');
 const Sequelize = require('sequelize');
 const Jwt = require('@hapi/jwt');
 
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const categorytRoutes = require('./routes/categoryRoutes');
-const topupRoutes = require('./routes/topupRoutes');
-const transcationtRoutes = require('./routes/historyRoutes');
+const routes = require('./routes');
 
 // Ambil konfigurasi database
 const env = process.env.NODE_ENV || 'development';
@@ -44,9 +40,21 @@ const init = async () => {
     host: process.env.HOST || 'localhost',
     routes: {
       cors: {
-        origin: ['*'],
-        headers: ['Accept', 'Content-Type'],
+        origin: [
+          'http://localhost:3000', // Next.js frontend
+          'http://127.0.0.1:3000',
+          'http://localhost:3001', // Backend itself (if needed)
+        ],
+        // Headers yang diizinkan untuk CORS
+        headers: [
+          'Accept',
+          'Content-Type',
+          'Authorization', // Penting untuk JWT
+          'X-Requested-With',
+        ],
         credentials: true,
+        // Tambahkan maxAge untuk preflight cache
+        maxAge: 86400, // 24 hours
       },
     },
   });
@@ -73,12 +81,63 @@ const init = async () => {
     },
   });
 
+  // Middleware untuk handle CORS secara manual
+  server.ext('onPreResponse', (request, h) => {
+    const response = request.response;
+
+    // Jika ini adalah preflight request (OPTIONS)
+    if (request.method === 'options') {
+      const corsResponse = h
+        .response()
+        .code(200)
+        .header(
+          'Access-Control-Allow-Origin',
+          request.headers.origin || 'http://localhost:3000'
+        )
+        .header(
+          'Access-Control-Allow-Methods',
+          'GET, POST, PUT, DELETE, OPTIONS'
+        )
+        .header(
+          'Access-Control-Allow-Headers',
+          'Accept, Content-Type, Authorization, X-Requested-With'
+        )
+        .header('Access-Control-Allow-Credentials', 'true')
+        .header('Access-Control-Max-Age', '86400');
+
+      return corsResponse;
+    }
+
+    // Untuk response biasa, pastikan CORS headers ada
+    if (response.isBoom) {
+      response.output.headers['Access-Control-Allow-Origin'] =
+        request.headers.origin || 'http://localhost:3000';
+      response.output.headers['Access-Control-Allow-Credentials'] = 'true';
+      response.output.headers['Access-Control-Allow-Methods'] =
+        'GET, POST, PUT, DELETE, OPTIONS';
+      response.output.headers['Access-Control-Allow-Headers'] =
+        'Accept, Content-Type, Authorization, X-Requested-With';
+    } else if (response.header) {
+      response.header(
+        'Access-Control-Allow-Origin',
+        request.headers.origin || 'http://localhost:3000'
+      );
+      response.header('Access-Control-Allow-Credentials', 'true');
+      response.header(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS'
+      );
+      response.header(
+        'Access-Control-Allow-Headers',
+        'Accept, Content-Type, Authorization, X-Requested-With'
+      );
+    }
+
+    return h.continue;
+  });
+
   // Daftarkan routes
-  server.route(authRoutes);
-  server.route(productRoutes);
-  server.route(categorytRoutes);
-  server.route(topupRoutes);
-  server.route(transcationtRoutes);
+  server.route(routes);
 
   // Jalankan server
   await server.start();

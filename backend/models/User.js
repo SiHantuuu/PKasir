@@ -1,45 +1,129 @@
-'use strict';
-const { Model } = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-      User.hasOne(models.Balance, {
-        foreignKey: 'UserId',
-        as: 'balance',
-      });
+// models/User.js
+const bcrypt = require('bcrypt');
 
-      // Add the missing association with Transaction
-      User.hasMany(models.Transaction, {
-        foreignKey: 'CustomerId',
-        as: 'transactions',
-      });
-    }
-  }
-  User.init(
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define(
+    'User',
     {
-      Nama: {
+      NIS: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: true,
+      },
+      NISN: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: true,
+      },
+      username: {
         type: DataTypes.STRING,
         unique: true,
         allowNull: false,
+        validate: {
+          len: [3, 50],
+          notEmpty: true,
+        },
       },
-      NFCId: {
+      email: {
         type: DataTypes.STRING,
         unique: true,
+        allowNull: true,
+        validate: {
+          isEmail: true,
+        },
       },
-      Pin: DataTypes.STRING,
-      Password: DataTypes.STRING,
-      role: DataTypes.STRING,
+      Nama: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
+      },
+      Gen: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      NFC_id: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: true,
+      },
+      PIN: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      password: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+          len: [6, 100],
+        },
+      },
+      Balance: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+        validate: {
+          min: 0,
+        },
+      },
+      role_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Roles',
+          key: 'id',
+        },
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+      },
     },
     {
-      sequelize,
-      modelName: 'User',
+      tableName: 'Users',
+      timestamps: true,
+      hooks: {
+        // Hash password sebelum disimpan
+        beforeCreate: async (user) => {
+          if (user.password) {
+            user.password = await bcrypt.hash(user.password, 10);
+          }
+        },
+        beforeUpdate: async (user) => {
+          if (user.changed('password') && user.password) {
+            user.password = await bcrypt.hash(user.password, 10);
+          }
+        },
+      },
     }
   );
+
+  User.associate = (models) => {
+    // Asosiasi dengan Role
+    User.belongsTo(models.Role, {
+      foreignKey: 'role_id',
+      as: 'role',
+    });
+
+    // Asosiasi dengan Transaksi
+    User.hasMany(models.Transaksi, {
+      foreignKey: 'Customer_id',
+    });
+  };
+
+  // Instance methods
+  User.prototype.comparePassword = async function (candidatePassword) {
+    if (!this.password) return false;
+    return await bcrypt.compare(candidatePassword, this.password);
+  };
+
+  User.prototype.isAdmin = function () {
+    return this.role && this.role.name === 'admin';
+  };
+
+  User.prototype.isStudent = function () {
+    return this.role && this.role.name === 'student';
+  };
+
   return User;
 };

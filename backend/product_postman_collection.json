@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Product API Collection",
+    "description": "Complete API collection for Product Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Product",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"Nama\": \"Laptop Gaming\",\n  \"Harga\": 15000000,\n  \"Stok\": 10,\n  \"Category_id\": 1\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/products",
+          "host": ["{{base_url}}"],
+          "path": ["products"]
+        },
+        "description": "Create a new product with name, price, stock, and optional category"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Product",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"Nama\": \"Laptop Gaming Updated\",\n  \"Harga\": 16000000,\n  \"Stok\": 15,\n  \"Category_id\": 2\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/products/1",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1"]
+        },
+        "description": "Update an existing product by ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Product By ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/1",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1"]
+        },
+        "description": "Get a specific product by ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Product By ID with Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/1?includeTransactions=true",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1"],
+          "query": [
+            {
+              "key": "includeTransactions",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Get a specific product by ID including transaction history"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products",
+          "host": ["{{base_url}}"],
+          "path": ["products"]
+        },
+        "description": "Get all products with default pagination"
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Products with Filters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products?page=1&limit=20&search=laptop&category_id=1&min_price=1000000&max_price=20000000&min_stock=5&max_stock=50&sortBy=Harga&sortOrder=ASC&includeCategory=true",
+          "host": ["{{base_url}}"],
+          "path": ["products"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "search",
+              "value": "laptop"
+            },
+            {
+              "key": "category_id",
+              "value": "1"
+            },
+            {
+              "key": "min_price",
+              "value": "1000000"
+            },
+            {
+              "key": "max_price",
+              "value": "20000000"
+            },
+            {
+              "key": "min_stock",
+              "value": "5"
+            },
+            {
+              "key": "max_stock",
+              "value": "50"
+            },
+            {
+              "key": "sortBy",
+              "value": "Harga"
+            },
+            {
+              "key": "sortOrder",
+              "value": "ASC"
+            },
+            {
+              "key": "includeCategory",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Get all products with advanced filtering and sorting options"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Product",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/1",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1"]
+        },
+        "description": "Delete a product by ID (soft delete if has transactions)"
+      },
+      "response": []
+    },
+    {
+      "name": "Force Delete Product",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/1?force=true",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1"],
+          "query": [
+            {
+              "key": "force",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Force delete a product even if it has transaction history"
+      },
+      "response": []
+    },
+    {
+      "name": "Add Stock",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 10,\n  \"type\": \"add\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/products/1/update-stock",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1", "update-stock"]
+        },
+        "description": "Add stock to a product"
+      },
+      "response": []
+    },
+    {
+      "name": "Subtract Stock",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 5,\n  \"type\": \"subtract\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/products/1/update-stock",
+          "host": ["{{base_url}}"],
+          "path": ["products", "1", "update-stock"]
+        },
+        "description": "Subtract stock from a product"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Low Stock Products",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/low-stock",
+          "host": ["{{base_url}}"],
+          "path": ["products", "low-stock"]
+        },
+        "description": "Get products with low stock (default threshold: 10)"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Low Stock Products with Custom Threshold",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products/low-stock?threshold=5&includeCategory=true",
+          "host": ["{{base_url}}"],
+          "path": ["products", "low-stock"],
+          "query": [
+            {
+              "key": "threshold",
+              "value": "5"
+            },
+            {
+              "key": "includeCategory",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Get products with stock below custom threshold"
+      },
+      "response": []
+    },
+    {
+      "name": "Bulk Update Products",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"products\": [\n    {\n      \"id\": 1,\n      \"updates\": {\n        \"Harga\": 17000000,\n        \"Stok\": 20\n      }\n    },\n    {\n      \"id\": 2,\n      \"updates\": {\n        \"Nama\": \"Mouse Gaming Pro\",\n        \"Harga\": 500000\n      }\n    },\n    {\n      \"id\": 3,\n      \"updates\": {\n        \"Category_id\": 2,\n        \"Stok\": 30\n      }\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/products/bulk-update",
+          "host": ["{{base_url}}"],
+          "path": ["products", "bulk-update"]
+        },
+        "description": "Update multiple products in a single request"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
